@@ -66,7 +66,7 @@ The first install renames NixOS-WSL's default user (`nixos`) to yours. NixOS-WSL
    git clone git@github.com:<you>/<this-repo>.git ~/dev-env
    cd ~/dev-env && make switch
    ```
-6. Continue with steps 2–3 of "Inside the machine" below.
+6. Continue with steps 2–4 of "Inside the machine" below.
 
 After that, `make switch` inside WSL rebuilds; it picks the host from the hostname.
 
@@ -74,10 +74,11 @@ After that, `make switch` inside WSL rebuilds; it picks the host from the hostna
 
 1. `devenv-keys` creates one SSH key per git account and prints where to register each one.
    Check them with `ssh -T git@github.com`.
-2. `make agents/setup` installs the agent add-ons that use their own installers
+2. Run `claude` and log in (open the link it prints in your browser). `make agents/setup` needs this first.
+3. `make agents/setup` installs the agent add-ons that use their own installers
    (plannotator's pi extension, the Claude Code provider for pi, rtk's Claude Code hook,
-   herdr-annotate).
-3. Log in to `pi` and/or `claude`.
+   herdr-annotate). It starts a background herdr server if none is running.
+4. Run `pi` and pick a model; with the Claude Code provider, it uses your `claude` login.
 
 ## Developing the base
 

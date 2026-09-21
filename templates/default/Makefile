@@ -103,11 +103,17 @@ vm/ssh:
 switch:
 	sudo nixos-rebuild switch --flake .#$(HOST) $(LOCAL_FLAGS)
 
-# Run inside the machine. Agent add-ons that install through their own tooling; safe to re-run.
+# Run inside the machine, after logging in to Claude Code (`claude`) once.
+# Agent add-ons that install through their own tooling; safe to re-run.
 agents/setup:
+	@test -d ~/.claude || { echo "Run 'claude' once and log in first, then re-run make agents/setup."; exit 1; }
 	pi install npm:@plannotator/pi-extension
 	pi install npm:pi-claude-code-provider
 	rtk init -g --auto-patch
+	@# herdr plugin commands talk to the herdr server; start one in the background if needed.
+	@herdr plugin list >/dev/null 2>&1 || { \
+		echo "Starting herdr server"; nohup herdr server >/dev/null 2>&1 & \
+		for i in 1 2 3 4 5 6 7 8 9 10; do sleep 1; herdr plugin list >/dev/null 2>&1 && break; done; }
 	herdr plugin list | grep -q annotate || herdr plugin install plannotator/herdr-annotate
 	herdr config check
 	-herdr server reload-config
