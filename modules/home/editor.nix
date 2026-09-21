@@ -3,13 +3,14 @@
 {
   home.packages = with pkgs; [
     neovim
-    nodejs # npm for `pi install`; copilot.vim
+    nodejs # npm for `pi install`
     gcc # nvim-treesitter compiles parsers
     tree-sitter
     gh # octo.nvim
     lua-language-server
     stylua
     yaml-language-server
+    nil # Nix language server; the config itself is Nix
     # Markdown: go-grip previews in the browser, glow renders in the terminal.
     go-grip
     glow

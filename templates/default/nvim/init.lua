@@ -1,31 +1,35 @@
--- A minimal starting point; replace it with your own config. This folder is
--- linked to ~/.config/nvim, so edits apply without a rebuild.
---
--- Plugin managers work as usual. Language servers come from Nix (the
--- devEnv.languages flags), not Mason: Mason's binaries don't run on NixOS.
+require("config.lazy")
 
-vim.g.mapleader = " "
-vim.o.number = true
+vim.opt.clipboard = "unnamedplus"
+
+vim.keymap.set("n", "<leader>f", ':lua require("oil").open()<CR>', { desc = "Open file explorer" })
+
+vim.api.nvim_set_keymap("n", "<leader>o", "<cmd>Octo<cr>", { desc = "Octo" })
+vim.api.nvim_set_keymap("n", "<C-p>", ':lua require("fzf-lua").files()<CR>', { noremap = true, silent = true })
+vim.api.nvim_set_keymap("n", "<C-f>", ':lua require("fzf-lua").live_grep()<CR>', { noremap = true, silent = true })
+
+vim.cmd.colorscheme("gruvbox")
+
 vim.o.relativenumber = true
-vim.o.signcolumn = "yes"
-vim.o.ignorecase = true
+vim.o.number = true
+
+vim.o.inccommand = "split"
+
 vim.o.smartcase = true
-vim.o.clipboard = "unnamedplus" -- over SSH this uses OSC 52, i.e. your local clipboard
+vim.o.ignorecase = true
+vim.o.splitbelow = true
+vim.o.splitright = true
 
--- Start each language server whose binary is installed.
-local servers = {
-	gopls = { cmd = { "gopls" }, filetypes = { "go", "gomod", "gowork" }, root_markers = { "go.mod", ".git" } },
-	ts_ls = {
-		cmd = { "typescript-language-server", "--stdio" },
-		filetypes = { "javascript", "javascriptreact", "typescript", "typescriptreact" },
-		root_markers = { "package.json", "tsconfig.json", ".git" },
-	},
-	lua_ls = { cmd = { "lua-language-server" }, filetypes = { "lua" }, root_markers = { ".git" } },
-}
+vim.o.signcolumn = "yes"
 
-for name, config in pairs(servers) do
-	if vim.fn.executable(config.cmd[1]) == 1 then
-		vim.lsp.config(name, config)
-		vim.lsp.enable(name)
-	end
-end
+vim.o.swapfile = false
+
+vim.o.wrap = true
+vim.o.linebreak = true
+
+vim.o.tabstop = 4
+vim.o.shiftwidth = 4
+
+vim.o.more = false
+
+vim.o.foldmethod = "manual"

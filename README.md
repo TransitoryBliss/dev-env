@@ -8,6 +8,8 @@ It runs as a Parallels VM on a Mac or under WSL2 on Windows, and gives you:
   [plannotator](https://plannotator.ai) for reviewing plans and diffs.
 - **Sessions:** [herdr](https://herdr.dev) instead of tmux, so agents keep running after you disconnect.
 - **Editor:** Neovim with language servers from Nix, plus toolchains switched on per machine.
+  The template ships a working config: lazy.nvim, treesitter, completion, formatting on save,
+  linting, a file explorer, fuzzy finding and a debugger.
 - **Git:** one identity and SSH key per account, chosen by the repo's owner; repos laid out
   as `~/source/<host>/<owner>/<repo>`.
 

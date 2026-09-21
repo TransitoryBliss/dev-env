@@ -65,7 +65,17 @@ commit its `flake.lock`.
 - **nix-ld** stays on: herdr plugins, plannotator and npm native modules download prebuilt
   glibc binaries.
 - **Mason can't be used** on NixOS (prebuilt binaries). Language servers and formatters come
-  from Nix, via the `languages` flags and `editor.nix`.
+  from Nix, via the `languages` flags and `editor.nix`. The template's nvim config wires them
+  through `vim.lsp.enable` (servers), conform.nvim (formatting) and nvim-lint (linting), and
+  gates every one on `executable()`: a language the host hasn't enabled is skipped silently
+  instead of erroring. A plugin's name for a tool is not always the binary's — nvim-lint calls
+  golangci-lint `golangcilint` — so `available()` in `nvim/lua/plugins/format.lua` takes
+  `{ name, binary }` pairs.
+- **Plugins that download their own binaries don't belong here.** copilot.lua was left out for
+  this reason: it fetches a 252 MB zip of copilot-language-server and extracts it with `unzip`
+  (both its `binary` and `nodejs` targets are zips). If Copilot is ever wanted, `nixos-unstable`
+  packages `copilot-language-server` (unfree) — add it to `devEnv.unfreePackages` and point
+  `server.custom_server_filepath` at it, rather than letting the plugin download anything.
 - **home-manager 26.05 option names:** `programs.git.settings` (not `userName`/`extraConfig`),
   `programs.ssh.settings` with OpenSSH directive names (not `matchBlocks`), and
   `programs.zsh.initContent` (not `initExtra`).

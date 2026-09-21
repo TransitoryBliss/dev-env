@@ -8,7 +8,7 @@ there; this repo holds only what's specific to me and my machines.
 | `flake.nix`         | One `nixosConfigurations` entry per machine                  |
 | `users/me.nix`      | Username, SSH login keys, git identities, time zone          |
 | `hosts/*.nix`       | Per-machine: platform, hostname, language flags              |
-| `nvim/`             | Neovim config, linked to `~/.config/nvim`                    |
+| `nvim/`             | Neovim config (lazy.nvim, LSP, treesitter), linked to `~/.config/nvim` |
 | `herdr/config.toml` | herdr config, linked to `~/.config/herdr/config.toml`        |
 | `Makefile`          | Install and rebuild helpers                                  |
 
@@ -81,6 +81,11 @@ After that, `make switch` inside WSL rebuilds; it picks the host from the hostna
    herdr-ohmyzsh). It starts a background herdr server if none is running.
    Until it has run, each new shell prints `[oh-my-zsh] plugin 'herdr' not found`.
 4. Run `pi` and pick a model; with the Claude Code provider, it uses your `claude` login.
+5. Start `nvim` once. lazy.nvim bootstraps itself, installs the plugins and compiles the
+   treesitter parsers listed in `nvim/lua/plugins/treesitter.lua` (the first run takes a
+   minute or two). It writes `nvim/lazy-lock.json` with the exact plugin commits — **commit
+   that file**, it is what pins the plugins on every other machine. After pulling someone
+   else's `lazy-lock.json`, run `nvim --headless "+Lazy! restore" +qa` to match it.
 
 ## Developing the base
 
