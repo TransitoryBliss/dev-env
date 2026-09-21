@@ -106,8 +106,14 @@ For `gh`, run `gh auth login --git-protocol ssh --skip-ssh-key` once per account
   `xdg-open` that hands URLs to Windows. The same helper opens `claude` and `gh` login links.
   `glow file.md` renders markdown in the terminal instead.
 - Some add-ons install through their own tooling, via the template's `make agents/setup`:
-  plannotator's pi extension, the Claude Code provider for pi, rtk's Claude Code hook
-  (`rtk init -g`), and the [herdr-annotate](https://github.com/plannotator/herdr-annotate) plugin.
+  plannotator's pi extension, the Claude Code provider for pi,
+  [pi-mcp-adapter](https://pi.dev/packages/pi-mcp-adapter) (MCP servers as pi tools),
+  [pi-subagents](https://pi.dev/packages/pi-subagents) (delegation to sub-agents),
+  [rpiv-ask-user-question](https://pi.dev/packages/@juicesharp/rpiv-ask-user-question)
+  (structured questions instead of guesses), rtk's Claude Code hook (`rtk init -g`), and the
+  [herdr-annotate](https://github.com/plannotator/herdr-annotate) plugin.
+  Pi packages can't be declared in Nix: `pi install` writes `~/.pi/agent/settings.json`,
+  which pi itself rewrites at runtime (theme, default model), so home-manager can't own it.
 
 ### Prebuilt binaries and nix-ld
 

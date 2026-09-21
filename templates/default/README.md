@@ -76,8 +76,9 @@ After that, `make switch` inside WSL rebuilds; it picks the host from the hostna
    Check them with `ssh -T git@github.com`.
 2. Run `claude` and log in (open the link it prints in your browser). `make agents/setup` needs this first.
 3. `make agents/setup` installs the agent add-ons that use their own installers
-   (plannotator's pi extension, the Claude Code provider for pi, rtk's Claude Code hook,
-   herdr-annotate). It starts a background herdr server if none is running.
+   (plannotator's pi extension, the Claude Code provider for pi, the pi MCP adapter,
+   pi-subagents, rpiv-ask-user-question, rtk's Claude Code hook, herdr-annotate).
+   It starts a background herdr server if none is running.
 4. Run `pi` and pick a model; with the Claude Code provider, it uses your `claude` login.
 
 ## Developing the base

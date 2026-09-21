@@ -110,6 +110,9 @@ agents/setup:
 	@test -d ~/.claude || { echo "Run 'claude' once and log in first, then re-run make agents/setup."; exit 1; }
 	pi install npm:@plannotator/pi-extension
 	pi install npm:pi-claude-code-provider
+	pi install npm:pi-mcp-adapter
+	pi install npm:pi-subagents
+	pi install npm:@juicesharp/rpiv-ask-user-question
 	rtk init -g --auto-patch
 	@# herdr plugin commands talk to the herdr server; start one in the background if needed.
 	@herdr plugin list >/dev/null 2>&1 || { \
