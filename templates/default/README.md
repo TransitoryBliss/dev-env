@@ -35,16 +35,45 @@ After changes: `make vm/bootstrap NIXADDR=<ip>`. Updates: `make vm/update NIXADD
 
 ## WSL2 on Windows
 
-1. Install [NixOS-WSL](https://github.com/nix-community/NixOS-WSL) and open it from Windows Terminal.
-2. Get this repo into the distro at `~/dev-env` (the default `devEnv.configDir`). For example,
-   clone it over HTTPS, or copy it from Windows (`/mnt/c/...`).
-3. `cd ~/dev-env && sudo nixos-rebuild switch --flake .#wsl`, then close and reopen the terminal.
+The first install renames NixOS-WSL's default user (`nixos`) to yours. NixOS-WSL requires
+`nixos-rebuild boot` plus a restart for that, not `switch`.
 
-After changes: `make switch HOST=wsl`. Updates: `nix flake update`, then `make switch HOST=wsl`.
+1. Download `nixos.wsl` from the [NixOS-WSL releases](https://github.com/nix-community/NixOS-WSL/releases/latest)
+   and install it from PowerShell: `wsl --install --from-file nixos.wsl`.
+2. Open it (`wsl -d NixOS`). As the `nixos` user, fetch this repo with temporary tools:
+   ```sh
+   nix --extra-experimental-features "nix-command flakes" shell nixpkgs#git nixpkgs#gh
+   gh auth login                                  # skip if this repo is public
+   gh repo clone <you>/<this-repo> /tmp/dev-env
+   ```
+3. Build the new system for the next start (`wsl` is the host's name in `flake.nix`):
+   ```sh
+   cd /tmp/dev-env
+   sudo env NIX_CONFIG="experimental-features = nix-command flakes" \
+     nixos-rebuild boot --flake .#wsl
+   ```
+   Then close the NixOS window.
+4. Restart the distro from PowerShell, so the new user is set up:
+   ```powershell
+   wsl -t NixOS
+   wsl -d NixOS --user root exit
+   wsl -t NixOS
+   ```
+5. Open NixOS again; you're now your own user. Create and register your SSH keys, then clone
+   this repo to `~/dev-env` (the default `devEnv.configDir`) and switch from there:
+   ```sh
+   devenv-keys                  # add each printed key on GitHub, then: ssh -T git@github.com
+   git clone git@github.com:<you>/<this-repo>.git ~/dev-env
+   cd ~/dev-env && make switch
+   ```
+6. Continue with steps 2–3 of "Inside the machine" below.
+
+After that, `make switch` inside WSL rebuilds; it picks the host from the hostname.
 
 ## Inside the machine
 
 1. `devenv-keys` creates one SSH key per git account and prints where to register each one.
+   Check them with `ssh -T git@github.com`.
 2. `make agents/setup` installs the agent add-ons that use their own installers
    (plannotator's pi extension, the Claude Code provider for pi, rtk's Claude Code hook,
    herdr-annotate).

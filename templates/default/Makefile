@@ -1,13 +1,22 @@
 # Run from the Mac unless noted. VM targets copy this repo to ~/dev-env in the
 # VM (devEnv.configDir) and build there, so the Mac doesn't need Nix.
-#   HOST      nixosConfigurations entry to build
+#   HOST      nixosConfigurations entry to build (default: see below)
 #   NIXADDR   IP of the VM (shown by `ip addr` in the VM console)
 #   NIXUSER   devEnv.user.name
 #   NIXBLOCK  install disk inside the VM (check with `lsblk`)
 #   DEV_ENV   optional: local checkout of the dev-env base to build against
 #             instead of the flake input (for developing the base itself)
 
-HOST ?= vm
+# Inside a NixOS machine, HOST defaults to its hostname (each host sets
+# networking.hostName to its nixosConfigurations name); from the Mac, to the VM.
+# Only a command-line HOST= overrides this, not an inherited environment variable.
+ifneq ($(origin HOST),command line)
+ifneq ($(wildcard /etc/NIXOS),)
+HOST := $(shell hostname)
+else
+HOST := vm
+endif
+endif
 NIXADDR ?= unset
 NIXUSER ?= me
 NIXBLOCK ?= /dev/sda
