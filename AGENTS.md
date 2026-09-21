@@ -69,6 +69,11 @@ commit its `flake.lock`.
 - **home-manager 26.05 option names:** `programs.git.settings` (not `userName`/`extraConfig`),
   `programs.ssh.settings` with OpenSSH directive names (not `matchBlocks`), and
   `programs.zsh.initContent` (not `initExtra`).
+- **zsh is in vi mode** whether we ask for it or not: zsh picks the vi keymap when `$EDITOR`
+  matches `*vi*`, and ours is `nvim`. Keybindings in `modules/home/default.nix` are therefore
+  bound with `bindkey -M` for `emacs`, `viins` and `vicmd`, not into whatever `main` happens
+  to be. Arrow keys are bound for both `^[[A`/`^[OA` forms plus terminfo, since terminals send
+  either depending on application keypad mode.
 - **Git identities** pick the SSH key by *URL*: an override's URLs are rewritten
   (`url.<alias>.insteadOf`) to a host alias like `github.com-<account>`, whose SSH block sets
   the key. Don't move key selection into `includeIf` + `core.sshCommand`: git doesn't document
