@@ -94,10 +94,11 @@ ifneq ($(DEV_ENV),)
 	rsync -av --delete $(RSYNC_EXCLUDES) $(DEV_ENV)/ $(NIXUSER)@$(NIXADDR):~/$(BASE_DIR)/
 endif
 
-# SSH in, forwarding plannotator's review UI to http://localhost:19432 on the Mac.
+# SSH in, forwarding browser UIs to the Mac: plannotator (http://localhost:19432)
+# and markdown previews from `md` (http://localhost:6419).
 vm/ssh:
 	@test "$(NIXADDR)" != "unset" || (echo "set NIXADDR=<vm-ip>" && exit 1)
-	ssh -L 19432:localhost:19432 $(NIXUSER)@$(NIXADDR)
+	ssh -L 19432:localhost:19432 -L 6419:localhost:6419 $(NIXUSER)@$(NIXADDR)
 
 # Run inside the machine (VM or WSL), from this repo.
 switch:

@@ -100,6 +100,11 @@ For `gh`, run `gh auth login --git-protocol ssh --skip-ssh-key` once per account
 - **plannotator** is a prebuilt release per architecture, in `pkgs/plannotator.nix`. Bump
   `version` and both hashes to update. There's no browser in the machine, so it serves its UI
   on port 19432. From a Mac, tunnel it with `make vm/ssh`; WSL forwards it to Windows' localhost.
+- **Markdown preview:** `md [file|dir]` runs [go-grip](https://github.com/chrishrb/go-grip)
+  on port 6419 (GitHub styling, mermaid, live reload) and prints the URL. `make vm/ssh`
+  forwards it to the Mac. On WSL it opens in the Windows browser by itself, through a small
+  `xdg-open` that hands URLs to Windows. The same helper opens `claude` and `gh` login links.
+  `glow file.md` renders markdown in the terminal instead.
 - Some add-ons install through their own tooling, via the template's `make agents/setup`:
   plannotator's pi extension, the Claude Code provider for pi, rtk's Claude Code hook
   (`rtk init -g`), and the [herdr-annotate](https://github.com/plannotator/herdr-annotate) plugin.
