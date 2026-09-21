@@ -68,6 +68,7 @@ Home level, under `devEnv.user.home`:
 | ------------------------------------ | ---------------------------------------------------- |
 | `devEnv.languages.go.enable`         | go, gopls, goimports, gofumpt, golangci-lint, delve  |
 | `devEnv.languages.node.enable`       | bun, pnpm, typescript + language server, prettier, eslint_d |
+| `devEnv.languages.playwright.enable` | Playwright's browsers from Nix, for the pi-playwright skill |
 | `devEnv.git.default`                 | `{ account, name, email }` used everywhere by default |
 | `devEnv.git.overrides."<host/owner>"` | The same, for repos under one org or user            |
 | `devEnv.terminalPalette`             | `"gruvbox-dark"`, `"catppuccin-mocha"` or null (default null) |
@@ -127,7 +128,10 @@ For `gh`, run `gh auth login --git-protocol ssh --skip-ssh-key` once per account
   [pi-mcp-adapter](https://pi.dev/packages/pi-mcp-adapter) (MCP servers as pi tools),
   [pi-subagents](https://pi.dev/packages/pi-subagents) (delegation to sub-agents),
   [rpiv-ask-user-question](https://pi.dev/packages/@juicesharp/rpiv-ask-user-question)
-  (structured questions instead of guesses), rtk's Claude Code hook (`rtk init -g`), and the
+  (structured questions instead of guesses),
+  [pi-playwright](https://pi.dev/packages/pi-playwright) (a browser through `@playwright/cli`,
+  on hosts with `devEnv.languages.playwright.enable`; `agents/setup` pins its CLI to the
+  release matching the Chromium from Nix), rtk's Claude Code hook (`rtk init -g`), and the
   [herdr-annotate](https://github.com/plannotator/herdr-annotate) and
   [herdr-ohmyzsh](https://github.com/robbyrussell/herdr-ohmyzsh) herdr plugins. The latter adds
   `hsplit`/`htab`/`hagent`/`hworktree`/`hreload`, shows commands slower than 10s in herdr's

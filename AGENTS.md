@@ -124,6 +124,21 @@ commit its `flake.lock`.
   ignores the system's unfree setting.
 - **rtk's pi extension** is fetched from an rtk release tag, because nixpkgs' rtk predates
   `rtk init --agent pi`. The extension only calls `rtk rewrite`, so the older binary works.
+- **Playwright is two pins that must agree.** `devEnv.languages.playwright.enable` only provides
+  browsers (`playwright-driver.browsers`, from `nixpkgs-unstable` — stable is far enough behind
+  that no `@playwright/cli` release matches it); Playwright itself comes from npm with
+  pi-playwright. Each `@playwright/cli` release pins a `playwright-core` that accepts *exactly
+  one* Chromium revision, and Playwright refuses any other, so the template's `agents/setup`
+  holds the CLI at the matching release with an npm `overrides` entry (`PLAYWRIGHT_CLI` in the
+  Makefile). Letting Playwright download its own is not a way out: those are prebuilt binaries
+  that don't run here, which is why `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD` is set. After a nixpkgs
+  bump, compare `ls $PLAYWRIGHT_BROWSERS_PATH` with the revision in the candidate CLI's
+  `playwright-core/browsers.json`; `agents/setup` warns when they have drifted apart.
+  The override doubles as a bug fix: pi-playwright's wrapper looks for `playwright-cli` under
+  its own package root, which npm's hoisting never creates — but the nesting npm uses for an
+  overridden dependency does, so without the pin the skill is broken outright.
+  `PLAYWRIGHT_MCP_BROWSER=chromium` is needed too: the CLI otherwise defaults to the `chrome`
+  *channel* and looks for Google Chrome in `/opt/google/chrome`.
 - **herdr:** plugin commands (`herdr plugin list/install`) need a running server; the
   template's `agents/setup` starts `herdr server` in the background. Known conflict:
   herdr-annotate's suggested `prefix+o` clashes with herdr's own default for notifications.

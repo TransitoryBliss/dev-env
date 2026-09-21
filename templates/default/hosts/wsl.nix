@@ -7,5 +7,6 @@
   devEnv.user.home.devEnv.languages = {
     go.enable = true;
     node.enable = true;
+    playwright.enable = true;
   };
 }

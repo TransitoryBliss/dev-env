@@ -13,7 +13,7 @@ in
     (import ./agents.nix { inherit inputs; })
     ./editor.nix
     ./git.nix
-    ./languages.nix
+    (import ./languages.nix { inherit inputs; })
     ./terminal.nix
   ];
 

@@ -22,6 +22,11 @@ NIXUSER ?= me
 NIXBLOCK ?= /dev/sda
 DEV_ENV ?=
 
+# The @playwright/cli release whose playwright-core wants exactly the Chromium
+# revision in the Nix browsers (devEnv.languages.playwright.enable). See
+# `agents/setup` for why it is pinned, and how to find the next one.
+PLAYWRIGHT_CLI = 0.1.19
+
 BASE_DIR = .cache/dev-env-base
 ifneq ($(DEV_ENV),)
 # From the Mac, DEV_ENV is synced to BASE_DIR in the VM; inside the machine it's used as is.
@@ -113,6 +118,27 @@ agents/setup:
 	pi install npm:pi-mcp-adapter
 	pi install npm:pi-subagents
 	pi install npm:@juicesharp/rpiv-ask-user-question
+	pi install npm:pi-playwright
+	@# pi-playwright depends on @playwright/cli by a range, and every release of
+	@# that pins a playwright-core which accepts exactly one Chromium revision.
+	@# The browsers come from Nix, so the CLI is held at the release that matches
+	@# them: a newer one asks for a revision the store doesn't have, and
+	@# Playwright's own download is a prebuilt binary that won't run here.
+	@# To move the pin, compare the revision in
+	@#   npm view playwright-core@<version> ...browsers.json
+	@# with `ls $$PLAYWRIGHT_BROWSERS_PATH` after a nixpkgs bump.
+	@#
+	@# The override also fixes the skill's wrapper: it looks for playwright-cli
+	@# under its *own* package root, which npm's hoisting never creates, but
+	@# which the nesting for an overridden dependency does.
+	@python3 -c 'import json,sys; p=sys.argv[1]; d=json.load(open(p)); d.setdefault("overrides",{})["@playwright/cli"]=sys.argv[2]; json.dump(d,open(p,"w"),indent=2)' \
+		~/.pi/agent/npm/package.json $(PLAYWRIGHT_CLI)
+	cd ~/.pi/agent/npm && npm install
+	@# Warn rather than fail: PLAYWRIGHT_BROWSERS_PATH is only in the environment
+	@# after a `make switch` and a fresh login.
+	@rev=$$(node -p 'require("$(HOME)/.pi/agent/npm/node_modules/pi-playwright/node_modules/playwright-core/browsers.json").browsers.find(b => b.name === "chromium").revision' 2>/dev/null); \
+		test -z "$$PLAYWRIGHT_BROWSERS_PATH" || test -d "$$PLAYWRIGHT_BROWSERS_PATH/chromium-$$rev" \
+		|| echo "warning: @playwright/cli $(PLAYWRIGHT_CLI) wants chromium-$$rev, which is not in $$PLAYWRIGHT_BROWSERS_PATH; move the PLAYWRIGHT_CLI pin"
 	rtk init -g --auto-patch
 	@# herdr plugin commands talk to the herdr server; start one in the background if needed.
 	@herdr plugin list >/dev/null 2>&1 || { \
