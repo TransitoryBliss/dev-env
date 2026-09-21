@@ -15,7 +15,9 @@ DEV_ENV ?=
 
 BASE_DIR = .cache/dev-env-base
 ifneq ($(DEV_ENV),)
-REBUILD_FLAGS = --override-input dev-env path:/home/$(NIXUSER)/$(BASE_DIR) --no-write-lock-file
+# From the Mac, DEV_ENV is synced to BASE_DIR in the VM; inside the machine it's used as is.
+REMOTE_FLAGS = --override-input dev-env path:/home/$(NIXUSER)/$(BASE_DIR) --no-write-lock-file
+LOCAL_FLAGS = --override-input dev-env path:$(abspath $(DEV_ENV)) --no-write-lock-file
 endif
 
 SSH_OPTIONS = -o PubkeyAuthentication=no -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no
@@ -61,7 +63,7 @@ vm/bootstrap0:
 # Step 2, and after every change: sync this repo and rebuild.
 # The rebuild locks any new flake inputs in the VM; the lock is copied back to commit.
 vm/bootstrap: vm/copy
-	ssh $(NIXUSER)@$(NIXADDR) "sudo nixos-rebuild switch --flake ~/dev-env#$(HOST) $(REBUILD_FLAGS)"
+	ssh $(NIXUSER)@$(NIXADDR) "sudo nixos-rebuild switch --flake ~/dev-env#$(HOST) $(REMOTE_FLAGS)"
 ifeq ($(DEV_ENV),)
 	scp $(NIXUSER)@$(NIXADDR):dev-env/flake.lock ./flake.lock
 endif
@@ -90,7 +92,7 @@ vm/ssh:
 
 # Run inside the machine (VM or WSL), from this repo.
 switch:
-	sudo nixos-rebuild switch --flake .#$(HOST) $(REBUILD_FLAGS)
+	sudo nixos-rebuild switch --flake .#$(HOST) $(LOCAL_FLAGS)
 
 # Run inside the machine. Agent add-ons that install through their own tooling; safe to re-run.
 agents/setup:
