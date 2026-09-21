@@ -91,6 +91,14 @@ commit its `flake.lock`.
   the plugin to `~/.config/herdr/plugins/github/<id>-<hash>`. The template's `agents/setup`
   therefore also invokes the `install` action, which relinks in place. `plugin install` needs
   `--yes` when stdin is not a terminal, and `plugin uninstall` leaves the symlink behind.
+- **The terminal palette is set by the shell, not the terminal.** Nothing inside the machine
+  owns the 16 ANSI colours — Windows Terminal or herdr's pane emulator does. But both accept
+  OSC writes (`OSC 4` per index, `OSC 10/11/12` for fg/bg/cursor), verified by querying the
+  pane's pty before and after, so `modules/home/terminal.nix` writes the palette from an
+  interactive zsh at `mkOrder 500`. Guard it with `-o interactive && -t 1 && $TERM !=
+  (dumb|linux)`: escape sequences written into a pipe corrupt the reader. Note herdr's pane
+  emulator answers OSC queries with its *own* built-in palette (Tomorrow Night), not the host
+  terminal's and not `theme.name` — `[theme]` only styles herdr's chrome, and has no ANSI keys.
 - **herdr keybindings:** `prefix+shift+r` is herdr's own `keys.reload_config`, so the
   herdr-ohmyzsh reload action is bound to `prefix+ctrl+r` instead of the `prefix+shift+r` its
   README suggests. Check new bindings against the upstream config reference before using them.

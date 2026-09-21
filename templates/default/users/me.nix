@@ -21,6 +21,11 @@
         #   email = "you@employer.com";
         # };
       };
+
+      # Colours an interactive zsh writes to its terminal, so the palette is
+      # part of this config instead of the terminal emulator's own settings.
+      # "gruvbox-dark", "catppuccin-mocha", or left out to change nothing.
+      # home.devEnv.terminalPalette = "gruvbox-dark";
     };
 
     timeZone = "UTC";

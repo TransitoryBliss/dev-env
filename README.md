@@ -68,6 +68,7 @@ Home level, under `devEnv.user.home`:
 | `devEnv.languages.node.enable`       | bun, pnpm, typescript + language server, prettier, eslint_d |
 | `devEnv.git.default`                 | `{ account, name, email }` used everywhere by default |
 | `devEnv.git.overrides."<host/owner>"` | The same, for repos under one org or user            |
+| `devEnv.terminalPalette`             | `"gruvbox-dark"`, `"catppuccin-mocha"` or null (default null) |
 
 ## Git identities and repositories
 
@@ -105,6 +106,15 @@ For `gh`, run `gh auth login --git-protocol ssh --skip-ssh-key` once per account
   by what's already typed, so `n` then Up cycles only commands starting with `n`. The keymap is
   emacs. `ZSH_CUSTOM` is `~/.local/share/oh-my-zsh-custom`, writable so herdr's Oh My Zsh
   plugin can link itself in; Oh My Zsh's own `custom/` is a read-only store path.
+- **Terminal colours** come from `devEnv.terminalPalette` (`gruvbox-dark`,
+  `catppuccin-mocha`, or null to leave the terminal alone; default null). Programs emit ANSI
+  colour *indices*, and the terminal decides what they look like — a palette that normally
+  lives outside the machine, in Windows Terminal's `settings.json` or macOS Terminal's
+  profile. An interactive zsh instead writes it with OSC escape sequences at startup, so the
+  palette is part of this config. Everything downstream follows: the prompt, `ls`, fzf,
+  zsh-syntax-highlighting. The palette belongs to the terminal rather than the shell, so it
+  outlives the shell that set it: leaving the machine in the same tab keeps these colours
+  until the tab closes. `printf '\e]104\e\\'` puts them back.
 - **Markdown preview:** `md [file|dir]` runs [go-grip](https://github.com/chrishrb/go-grip)
   on port 6419 (GitHub styling, mermaid, live reload) and prints the URL. `make vm/ssh`
   forwards it to the Mac. On WSL it opens in the Windows browser by itself, through a small

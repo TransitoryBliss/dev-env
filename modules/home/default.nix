@@ -14,6 +14,7 @@ in
     ./editor.nix
     ./git.nix
     ./languages.nix
+    ./terminal.nix
   ];
 
   options.devEnv.configDir = lib.mkOption {
