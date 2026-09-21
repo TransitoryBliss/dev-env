@@ -69,11 +69,31 @@ commit its `flake.lock`.
 - **home-manager 26.05 option names:** `programs.git.settings` (not `userName`/`extraConfig`),
   `programs.ssh.settings` with OpenSSH directive names (not `matchBlocks`), and
   `programs.zsh.initContent` (not `initExtra`).
-- **zsh is in vi mode** whether we ask for it or not: zsh picks the vi keymap when `$EDITOR`
-  matches `*vi*`, and ours is `nvim`. Keybindings in `modules/home/default.nix` are therefore
-  bound with `bindkey -M` for `emacs`, `viins` and `vicmd`, not into whatever `main` happens
-  to be. Arrow keys are bound for both `^[[A`/`^[OA` forms plus terminfo, since terminals send
-  either depending on application keypad mode.
+- **zsh would be in vi mode** without anyone asking: zsh picks the vi keymap when `$EDITOR`
+  matches `*vi*`, and ours is `nvim`. Oh My Zsh's `lib/key-bindings.zsh` then forces emacs with
+  `bindkey -e` anyway, so `defaultKeymap = "emacs"` in `modules/home/default.nix` states the
+  outcome instead of leaving it to load order. Keybindings there are still bound with
+  `bindkey -M` for `emacs`, `viins` and `vicmd`, and arrows for both `^[[A`/`^[OA` forms plus
+  terminfo, since terminals send either depending on application keypad mode.
+- **Oh My Zsh aliases shadow our shell functions.** `lib/directories.zsh` defines
+  `alias md='mkdir -p'`, which collided with the `md` markdown helper in `editor.nix`. zsh
+  expands aliases while *parsing*, so the alias breaks the definition ("defining function based
+  on alias") *and* wins at the prompt afterwards — writing it as `function md { }` does not
+  help. `unalias md` first. Check any new shell function against `$ZSH/lib/*.zsh`.
+- **`ZSH_CUSTOM` must be set in `.zshenv`, not `home.sessionVariables`.** Oh My Zsh's default
+  `$ZSH/custom` is a read-only store path, so `herdr plugin install` cannot link into it. The
+  writable replacement is exported from `programs.zsh.envExtra`: `home.sessionVariables` lands
+  in `hm-session-vars.sh`, which returns early when `__HM_SESS_VARS_SOURCED` is already set,
+  and a long-lived herdr server inherits that from the shell that started it. `.zshenv` is
+  read unconditionally, which is what the plugin's non-interactive build step sees.
+- **`herdr plugin install` leaves a dangling zsh plugin link.** The plugin's build step runs in
+  herdr's temporary checkout and symlinks `$ZSH_CUSTOM/plugins/herdr` to it; herdr then moves
+  the plugin to `~/.config/herdr/plugins/github/<id>-<hash>`. The template's `agents/setup`
+  therefore also invokes the `install` action, which relinks in place. `plugin install` needs
+  `--yes` when stdin is not a terminal, and `plugin uninstall` leaves the symlink behind.
+- **herdr keybindings:** `prefix+shift+r` is herdr's own `keys.reload_config`, so the
+  herdr-ohmyzsh reload action is bound to `prefix+ctrl+r` instead of the `prefix+shift+r` its
+  README suggests. Check new bindings against the upstream config reference before using them.
 - **Git identities** pick the SSH key by *URL*: an override's URLs are rewritten
   (`url.<alias>.insteadOf`) to a host alias like `github.com-<account>`, whose SSH block sets
   the key. Don't move key selection into `includeIf` + `core.sshCommand`: git doesn't document

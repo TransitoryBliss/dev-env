@@ -100,6 +100,11 @@ For `gh`, run `gh auth login --git-protocol ssh --skip-ssh-key` once per account
 - **plannotator** is a prebuilt release per architecture, in `pkgs/plannotator.nix`. Bump
   `version` and both hashes to update. There's no browser in the machine, so it serves its UI
   on port 19432. From a Mac, tunnel it with `make vm/ssh`; WSL forwards it to Windows' localhost.
+- **The shell** is zsh with [Oh My Zsh](https://ohmyz.sh) (`robbyrussell` theme, `git` and
+  `direnv` plugins), zsh-autosuggestions and zsh-syntax-highlighting. Up/Down search history
+  by what's already typed, so `n` then Up cycles only commands starting with `n`. The keymap is
+  emacs. `ZSH_CUSTOM` is `~/.local/share/oh-my-zsh-custom`, writable so herdr's Oh My Zsh
+  plugin can link itself in; Oh My Zsh's own `custom/` is a read-only store path.
 - **Markdown preview:** `md [file|dir]` runs [go-grip](https://github.com/chrishrb/go-grip)
   on port 6419 (GitHub styling, mermaid, live reload) and prints the URL. `make vm/ssh`
   forwards it to the Mac. On WSL it opens in the Windows browser by itself, through a small
@@ -111,7 +116,11 @@ For `gh`, run `gh auth login --git-protocol ssh --skip-ssh-key` once per account
   [pi-subagents](https://pi.dev/packages/pi-subagents) (delegation to sub-agents),
   [rpiv-ask-user-question](https://pi.dev/packages/@juicesharp/rpiv-ask-user-question)
   (structured questions instead of guesses), rtk's Claude Code hook (`rtk init -g`), and the
-  [herdr-annotate](https://github.com/plannotator/herdr-annotate) plugin.
+  [herdr-annotate](https://github.com/plannotator/herdr-annotate) and
+  [herdr-ohmyzsh](https://github.com/robbyrussell/herdr-ohmyzsh) herdr plugins. The latter adds
+  `hsplit`/`htab`/`hagent`/`hworktree`/`hreload`, shows commands slower than 10s in herdr's
+  sidebar with a toast when they finish, and reloads Oh My Zsh in every idle pane
+  (`prefix+ctrl+r`, since `prefix+shift+r` is herdr's own `reload_config`).
   Pi packages can't be declared in Nix: `pi install` writes `~/.pi/agent/settings.json`,
   which pi itself rewrites at runtime (theme, default model), so home-manager can't own it.
 

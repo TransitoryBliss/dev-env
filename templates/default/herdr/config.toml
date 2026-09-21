@@ -53,3 +53,13 @@ key = "prefix+ctrl+o"
 type = "plugin_action"
 command = "annotate.last-newest"
 description = "review the agent's newest reply"
+
+# herdr-ohmyzsh (installed by `make agents/setup`)
+
+# The plugin's README suggests prefix+shift+r, which is herdr's own default
+# for keys.reload_config; prefix+ctrl+r is free.
+[[keys.command]]
+key = "prefix+ctrl+r"
+type = "plugin_action"
+command = "ohmyzsh.shell.reload-all"
+description = "reload Oh My Zsh in idle panes"

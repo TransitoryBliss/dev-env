@@ -119,6 +119,16 @@ agents/setup:
 		echo "Starting herdr server"; nohup herdr server >/dev/null 2>&1 & \
 		for i in 1 2 3 4 5 6 7 8 9 10; do sleep 1; herdr plugin list >/dev/null 2>&1 && break; done; }
 	herdr plugin list | grep -q annotate || herdr plugin install plannotator/herdr-annotate
+	@# Oh My Zsh plugin: links itself into $$ZSH_CUSTOM/plugins/herdr, which the
+	@# home-manager module points at a writable directory. `plugin install` runs
+	@# that link step in a temporary checkout and herdr then moves the plugin, so
+	@# the link it leaves behind dangles; the install action relinks it in place.
+	@# --yes because `plugin install` refuses to prompt when stdin is not a terminal.
+	herdr plugin list | grep -q ohmyzsh || herdr plugin install robbyrussell/herdr-ohmyzsh --yes
+	-herdr plugin action invoke install --plugin ohmyzsh.shell >/dev/null
+	@link="$${ZSH_CUSTOM:-$$HOME/.local/share/oh-my-zsh-custom}/plugins/herdr"; \
+		for i in 1 2 3 4 5; do test -d "$$link/" && break; sleep 1; done; \
+		test -d "$$link/" || echo "warning: $$link does not resolve; run 'herdr plugin action invoke install --plugin ohmyzsh.shell'"
 	herdr config check
 	-herdr server reload-config
 

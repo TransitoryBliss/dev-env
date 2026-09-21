@@ -25,7 +25,13 @@
   # `md [file|dir]`: preview markdown with live reload on a fixed port (6419),
   # forwarded to the host like plannotator's. go-grip prints the URL; it only
   # tries to open a browser where xdg-open exists (on WSL it opens Windows').
+  #
+  # Oh My Zsh's lib/directories.zsh defines `alias md='mkdir -p'`. zsh expands
+  # aliases while parsing, so the alias both breaks this definition ("defining
+  # function based on alias") and wins at the prompt afterwards, even when the
+  # function is written with the `function` keyword. Drop it first.
   programs.zsh.initContent = ''
+    unalias md 2>/dev/null
     md() {
       local open=false
       command -v xdg-open >/dev/null && open=true
