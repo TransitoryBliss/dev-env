@@ -90,12 +90,17 @@ commit its `flake.lock`.
   expands aliases while *parsing*, so the alias breaks the definition ("defining function based
   on alias") *and* wins at the prompt afterwards — writing it as `function md { }` does not
   help. `unalias md` first. Check any new shell function against `$ZSH/lib/*.zsh`.
-- **`ZSH_CUSTOM` must be set in `.zshenv`, not `home.sessionVariables`.** Oh My Zsh's default
-  `$ZSH/custom` is a read-only store path, so `herdr plugin install` cannot link into it. The
-  writable replacement is exported from `programs.zsh.envExtra`: `home.sessionVariables` lands
-  in `hm-session-vars.sh`, which returns early when `__HM_SESS_VARS_SOURCED` is already set,
-  and a long-lived herdr server inherits that from the shell that started it. `.zshenv` is
-  read unconditionally, which is what the plugin's non-interactive build step sees.
+- **Anything a herdr pane must see belongs in `.zshenv`, not `home.sessionVariables`.** The
+  latter lands in `hm-session-vars.sh`, which returns early when `__HM_SESS_VARS_SOURCED` is
+  already set — and a herdr server started before a `make switch` hands that flag, with its
+  own stale environment, to every shell it spawns afterwards. `programs.zsh.envExtra` writes
+  `.zshenv`, which zsh reads unconditionally. Two things depend on this: `ZSH_CUSTOM` (Oh My
+  Zsh's default `$ZSH/custom` is a read-only store path, so `herdr plugin install` cannot link
+  into it, and the plugin's build step is non-interactive), and the `PLAYWRIGHT_*` variables
+  (agents run in herdr panes; see the Playwright entry below). Setting both is fine and is
+  what `languages.nix` does — `home.sessionVariables` still covers anything not started from
+  zsh. After adding one, `herdr server reload-config` is *not* enough: the server's own
+  environment is fixed at start, so either open a pane from a fresh login or restart it.
 - **`herdr plugin install` leaves a dangling zsh plugin link.** The plugin's build step runs in
   herdr's temporary checkout and symlinks `$ZSH_CUSTOM/plugins/herdr` to it; herdr then moves
   the plugin to `~/.config/herdr/plugins/github/<id>-<hash>`. The template's `agents/setup`
@@ -137,6 +142,11 @@ commit its `flake.lock`.
   The override doubles as a bug fix: pi-playwright's wrapper looks for `playwright-cli` under
   its own package root, which npm's hoisting never creates — but the nesting npm uses for an
   overridden dependency does, so without the pin the skill is broken outright.
+  The variables are exported from **both** `home.sessionVariables` and `programs.zsh.envExtra`
+  on purpose (see the `.zshenv` entry above). An agent in a herdr pane that cannot see
+  `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD` does not fail cleanly: the skill calls `install-browser`,
+  downloads ~650M of prebuilt Chromium into `~/.cache/ms-playwright`, and it dies with exit
+  127 on 26 missing libraries. The diagnosis then looks like a nix-ld problem, which it isn't.
   `PLAYWRIGHT_MCP_BROWSER=chromium` is needed too: the CLI otherwise defaults to the `chrome`
   *channel* and looks for Google Chrome in `/opt/google/chrome`.
 - **herdr:** plugin commands (`herdr plugin list/install`) need a running server; the
