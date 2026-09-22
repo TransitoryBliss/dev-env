@@ -38,7 +38,9 @@ outputs = { dev-env, ... }: {
 
 You get improvements to the base with `nix flake update dev-env`, without merging anything.
 To change the base itself, fork this repo and point `inputs.dev-env.url` at your fork.
-The template's README covers installing on each platform.
+The template's README covers installing on each platform. For a filled-in private config
+(a user with a personal and a work GitHub account, two hosts), see
+[dev-env-example](https://github.com/TransitoryBliss/dev-env-example).
 
 | Path                 | What                                                       |
 | -------------------- | ---------------------------------------------------------- |
