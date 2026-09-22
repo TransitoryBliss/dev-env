@@ -25,6 +25,10 @@
     networking.networkmanager.enable = true;
     users.users.${config.devEnv.user.name}.extraGroups = [ "networkmanager" ];
 
+    # The VM is only reachable from the host (see the SSH note below), so
+    # there's no point firewalling dev server ports one-by-one.
+    networking.firewall.enable = false;
+
     # You work in the VM over SSH from the host. Key-only; sudo needs no password
     # since the VM is only reachable from the host.
     services.openssh = {
