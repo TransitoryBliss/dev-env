@@ -50,8 +50,12 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    devEnv.proxy.services.psm =
-      lib.mkIf hm.devEnv.sessionManager.enable hm.devEnv.sessionManager.port;
+    devEnv.proxy.services = {
+      psm = lib.mkIf hm.devEnv.sessionManager.enable hm.devEnv.sessionManager.port;
+      # Fixed ports set in modules/home/agents.nix and editor.nix.
+      plannotator = lib.mkDefault 19432;
+      md = lib.mkDefault 6419;
+    };
 
     services.caddy = {
       enable = true;

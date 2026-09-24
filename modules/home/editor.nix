@@ -24,7 +24,9 @@
   home.shellAliases.vim = "nvim";
 
   # `md [file|dir]`: preview markdown with live reload on a fixed port (6419),
-  # forwarded to the host like plannotator's. go-grip prints the URL; it only
+  # with devEnv.proxy at http://md.localhost:8090. go-grip's -H only sets the
+  # printed URL: it still listens on all interfaces, so the Parallels firewall
+  # is what keeps it private there. It only
   # tries to open a browser where xdg-open exists (on WSL it opens Windows').
   #
   # Oh My Zsh's lib/directories.zsh defines `alias md='mkdir -p'`. zsh expands
@@ -36,7 +38,7 @@
     md() {
       local open=false
       command -v xdg-open >/dev/null && open=true
-      go-grip -b="$open" -p "''${MD_PORT:-6419}" "$@"
+      go-grip -b="$open" -H 127.0.0.1 -p "''${MD_PORT:-6419}" "$@"
     }
   '';
 

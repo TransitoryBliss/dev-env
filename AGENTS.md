@@ -167,6 +167,10 @@ commit its `flake.lock`.
 - **devEnv.proxy** reads `devEnv.sessionManager` from the user's home-manager config to route
   `psm` by itself. Its checks (`Origin`, known hosts) are the reason the tunnel is safe, so
   keep them when adding services. The Parallels firewall is back on for the same reason.
+  It also routes `plannotator` (19432) and `md` (6419), whose ports are fixed in `agents.nix`
+  and `editor.nix`. Plannotator must stay in local mode (`PLANNOTATOR_REMOTE=0`): it detects
+  SSH sessions and switches to remote mode by itself, which binds `0.0.0.0`. Local mode
+  ignores `PLANNOTATOR_URL_HOST`, so its printed link keeps saying `localhost:19432`.
 - **herdr:** plugin commands (`herdr plugin list/install`) need a running server; the
   template's `agents/setup` starts `herdr server` in the background. Known conflict:
   herdr-annotate's suggested `prefix+o` clashes with herdr's own default for notifications.

@@ -108,9 +108,11 @@ For `gh`, run `gh auth login --git-protocol ssh --skip-ssh-key` once per account
 - **herdr** comes from its own flake, pinned by tag in `flake.nix`.
 - **plannotator** is a prebuilt release per architecture, in `pkgs/plannotator.nix`. Bump
   `version` and both hashes to update. There's no browser in the machine, so it serves its UI
-  on port 19432. From a Mac, tunnel it with `make vm/ssh`; WSL forwards it to Windows' localhost.
+  on `127.0.0.1:19432` (local mode, forced with `PLANNOTATOR_REMOTE=0`: remote mode binds
+  `0.0.0.0`). Open it at `http://plannotator.localhost:8090` through `devEnv.proxy`. The URL it
+  prints still says `localhost:19432`, because local mode ignores `PLANNOTATOR_URL_HOST`.
 - **The local proxy** (`devEnv.proxy`) is Caddy on `127.0.0.1:8090`, routing by hostname:
-  `http://psm.localhost:8090` and so on. Browsers resolve `*.localhost` to 127.0.0.1 by
+  `http://psm.localhost:8090`, `plannotator.localhost`, `md.localhost`. Browsers resolve `*.localhost` to 127.0.0.1 by
   themselves, so no DNS is needed. `make vm/ssh` forwards that one port. Caddy only answers
   hostnames it knows (no DNS rebinding), rejects requests whose `Origin` is another site,
   including WebSocket upgrades, and strips the backends' CORS headers. On Parallels the
@@ -139,8 +141,8 @@ For `gh`, run `gh auth login --git-protocol ssh --skip-ssh-key` once per account
   outlives the shell that set it: leaving the machine in the same tab keeps these colours
   until the tab closes. `printf '\e]104\e\\'` puts them back.
 - **Markdown preview:** `md [file|dir]` runs [go-grip](https://github.com/chrishrb/go-grip)
-  on port 6419 (GitHub styling, mermaid, live reload) and prints the URL. `make vm/ssh`
-  forwards it to the Mac. On WSL it opens in the Windows browser by itself, through a small
+  on `127.0.0.1:6419` (GitHub styling, mermaid, live reload) and prints the URL. Through
+  `devEnv.proxy` it's at `http://md.localhost:8090`. On WSL it opens in the Windows browser by itself, through a small
   `xdg-open` that hands URLs to Windows. The same helper opens `claude` and `gh` login links.
   `glow file.md` renders markdown in the terminal instead.
 - Some add-ons install through their own tooling, via the template's `make agents/setup`:

@@ -111,12 +111,12 @@ ifneq ($(DEV_ENV),)
 	rsync -av --delete $(RSYNC_EXCLUDES) $(DEV_ENV)/ $(NIXUSER)@$(NIXADDR):~/$(BASE_DIR)/
 endif
 
-# SSH in, forwarding browser UIs to the Mac: plannotator (http://localhost:19432),
-# markdown previews from `md` (http://localhost:6419) and devEnv.proxy
-# (http://<name>.localhost:8090, e.g. http://psm.localhost:8090).
+# SSH in, forwarding devEnv.proxy to the Mac: every browser UI in the machine
+# is at http://<name>.localhost:8090 (psm, plannotator, md). LogLevel=ERROR
+# keeps refused forwards (a stale tab retrying) from flooding the terminal.
 vm/ssh:
 	@test "$(NIXADDR)" != "unset" || (echo "set NIXADDR=<vm-ip>" && exit 1)
-	ssh -o LogLevel=ERROR -L 19432:localhost:19432 -L 6419:localhost:6419 -L 8090:localhost:8090 $(NIXUSER)@$(NIXADDR)
+	ssh -o LogLevel=ERROR -L 8090:localhost:8090 $(NIXUSER)@$(NIXADDR)
 
 # Run inside the machine (VM or WSL), from this repo.
 switch:
