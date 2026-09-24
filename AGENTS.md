@@ -33,6 +33,9 @@ it (see below).
 | `modules/nixos/{parallels,wsl}.nix` | One per `devEnv.platform`. Always imported; everything under `config = lib.mkIf (platform == …)`. |
 | `modules/home/*.nix` | Home-manager: `languages` (flags), `editor`, `git` (identities, ghq), `agents` (pi, Claude Code, rtk, herdr, plannotator). |
 | `pkgs/plannotator.nix` | Prebuilt binary per architecture. |
+| `pkgs/pi-session-manager/` | Built from source, with our `Cargo.lock` and `security.patch`. |
+| `modules/nixos/proxy.nix` | `devEnv.proxy`: Caddy on one localhost port, a `<name>.localhost` vhost per service. |
+| `modules/home/session-manager.nix` | `devEnv.sessionManager`: PSM user service and pi extension. |
 
 - **Unfree packages:** add names to `devEnv.unfreePackages`. Don't set
   `nixpkgs.config.allowUnfreePredicate` anywhere else; two definitions of a function don't merge.
@@ -149,6 +152,21 @@ commit its `flake.lock`.
   127 on 26 missing libraries. The diagnosis then looks like a nix-ld problem, which it isn't.
   `PLAYWRIGHT_MCP_BROWSER=chromium` is needed too: the CLI otherwise defaults to the `chrome`
   *channel* and looks for Google Chrome in `/opt/google/chrome`.
+- **Pi Session Manager** (`pkgs/pi-session-manager/`): upstream commits no `Cargo.lock`, so ours
+  lives next to the package. Regenerate it in a checkout of the new tag with
+  `CARGO_RESOLVER_INCOMPATIBLE_RUST_VERSIONS=fallback cargo generate-lockfile`; without that,
+  cargo picks crates that need a newer rustc than nixpkgs has (`kstring` 2.0.5 wanted 1.96).
+  `security.patch` is not optional: unpatched 0.8.6 takes `X-Forwarded-For: 127.0.0.1` from
+  any client as proof of loopback (loopback skips the token), sends
+  `Access-Control-Allow-Origin: *`, and ships a fixed default token. With its terminal
+  endpoints that is a shell for anyone who reaches the port, or any web page through a
+  tunnel. Reported to the maintainer privately. PSM rewrites its own `config.json`, so the
+  user service's `ExecStartPre` forces `bind_addr = 127.0.0.1` with jq instead of
+  home-manager owning the file. Regenerate the patch with the real git binary: rtk's `git
+  diff` wrapper rewrites the output even when redirected, and the result won't apply.
+- **devEnv.proxy** reads `devEnv.sessionManager` from the user's home-manager config to route
+  `psm` by itself. Its checks (`Origin`, known hosts) are the reason the tunnel is safe, so
+  keep them when adding services. The Parallels firewall is back on for the same reason.
 - **herdr:** plugin commands (`herdr plugin list/install`) need a running server; the
   template's `agents/setup` starts `herdr server` in the background. Known conflict:
   herdr-annotate's suggested `prefix+o` clashes with herdr's own default for notifications.

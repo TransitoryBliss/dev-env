@@ -47,7 +47,7 @@ The template's README covers installing on each platform. For a filled-in privat
 | `flake.nix`          | Exports `nixosModules`, `homeModules`, `lib.mkHost`, the template |
 | `modules/nixos/`     | User account, Nix settings, platforms (`parallels.nix`, `wsl.nix`) |
 | `modules/home/`      | Languages, editor, git identities, agents                  |
-| `pkgs/`              | Packages not in nixpkgs (plannotator)                      |
+| `pkgs/`              | Packages not in nixpkgs (plannotator, pi-session-manager)  |
 | `templates/default/` | Starting point for a private config                        |
 
 ## Options
@@ -63,6 +63,8 @@ System level, usually in `users/<you>.nix` and `hosts/<machine>.nix`:
 | `devEnv.configDir`       | Checkout of your private config in the machine (default `~/dev-env`) |
 | `devEnv.timeZone`        | Time zone (default `UTC`)                                          |
 | `devEnv.unfreePackages`  | Extra unfree packages to allow, by name                            |
+| `devEnv.proxy.enable`    | Local reverse proxy for web UIs, at `http://<name>.localhost:8090` |
+| `devEnv.proxy.services`  | Extra services to route, as `{ name = localhostPort; }`            |
 
 Home level, under `devEnv.user.home`:
 
@@ -74,6 +76,7 @@ Home level, under `devEnv.user.home`:
 | `devEnv.git.default`                 | `{ account, name, email }` used everywhere by default |
 | `devEnv.git.overrides."<host/owner>"` | The same, for repos under one org or user            |
 | `devEnv.terminalPalette`             | `"gruvbox-dark"`, `"catppuccin-mocha"` or null (default null) |
+| `devEnv.sessionManager.enable`       | Pi Session Manager: server, web UI and pi extension  |
 
 ## Git identities and repositories
 
@@ -106,6 +109,21 @@ For `gh`, run `gh auth login --git-protocol ssh --skip-ssh-key` once per account
 - **plannotator** is a prebuilt release per architecture, in `pkgs/plannotator.nix`. Bump
   `version` and both hashes to update. There's no browser in the machine, so it serves its UI
   on port 19432. From a Mac, tunnel it with `make vm/ssh`; WSL forwards it to Windows' localhost.
+- **The local proxy** (`devEnv.proxy`) is Caddy on `127.0.0.1:8090`, routing by hostname:
+  `http://psm.localhost:8090` and so on. Browsers resolve `*.localhost` to 127.0.0.1 by
+  themselves, so no DNS is needed. `make vm/ssh` forwards that one port. Caddy only answers
+  hostnames it knows (no DNS rebinding), rejects requests whose `Origin` is another site,
+  including WebSocket upgrades, and strips the backends' CORS headers. On Parallels the
+  firewall is on with only SSH open, so this and the tunnel are the ways in.
+- **Pi Session Manager** ([Dwsy/pi-session-manager](https://github.com/Dwsy/pi-session-manager))
+  is built from source in `pkgs/pi-session-manager/`: the headless `pi-session-cli` with its
+  web UI embedded, no desktop app. `devEnv.sessionManager.enable` runs it as a systemd user
+  service on `127.0.0.1:52131`, links its pi extension (psm-bridge, `/psm` and `/kanban`) into
+  `~/.pi/agent/extensions`, and with `devEnv.proxy` serves it at `http://psm.localhost:8090`.
+  The package carries `security.patch`: upstream 0.8.6 trusts a client-supplied
+  `X-Forwarded-For`, answers every origin with `Access-Control-Allow-Origin: *`, and creates
+  the same fixed token on every install, which together let anyone who reaches it, or any web
+  page, open a shell as you. Drop the patch once upstream fixes it.
 - **The shell** is zsh with [Oh My Zsh](https://ohmyz.sh) (`robbyrussell` theme, `git` and
   `direnv` plugins), zsh-autosuggestions and zsh-syntax-highlighting. Up/Down search history
   by what's already typed, so `n` then Up cycles only commands starting with `n`. The keymap is

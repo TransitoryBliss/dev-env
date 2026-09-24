@@ -14,6 +14,7 @@ in
     ./editor.nix
     ./git.nix
     (import ./languages.nix { inherit inputs; })
+    ./session-manager.nix
     ./terminal.nix
   ];
 

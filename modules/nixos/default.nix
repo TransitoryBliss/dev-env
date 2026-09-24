@@ -12,6 +12,7 @@ in
     inputs.home-manager.nixosModules.home-manager
     inputs.nixos-wsl.nixosModules.default
     ./parallels.nix
+    ./proxy.nix
     ./wsl.nix
   ];
 
