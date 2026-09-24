@@ -27,6 +27,18 @@ DEV_ENV ?=
 # `agents/setup` for why it is pinned, and how to find the next one.
 PLAYWRIGHT_CLI = 0.1.19
 
+# Pi packages for `agents/setup`, pinned. Pi checks unpinned ones against npm
+# at every start and lists any newer release; pinned ones only change here.
+# To upgrade, bump a version (`npm view <pkg> version`) and re-run agents/setup.
+PI_PACKAGES = \
+	@plannotator/pi-extension@0.27.19 \
+	pi-claude-code-provider@0.5.0 \
+	pi-mcp-adapter@2.37.0 \
+	pi-subagents@0.71.0 \
+	@juicesharp/rpiv-ask-user-question@2.11.0 \
+	pi-playwright@0.1.2 \
+	pi-web-access@0.31.0
+
 BASE_DIR = .cache/dev-env-base
 ifneq ($(DEV_ENV),)
 # From the Mac, DEV_ENV is synced to BASE_DIR in the VM; inside the machine it's used as is.
@@ -113,12 +125,7 @@ switch:
 # Agent add-ons that install through their own tooling; safe to re-run.
 agents/setup:
 	@test -d ~/.claude || { echo "Run 'claude' once and log in first, then re-run make agents/setup."; exit 1; }
-	pi install npm:@plannotator/pi-extension
-	pi install npm:pi-claude-code-provider
-	pi install npm:pi-mcp-adapter
-	pi install npm:pi-subagents
-	pi install npm:@juicesharp/rpiv-ask-user-question
-	pi install npm:pi-playwright
+	for p in $(PI_PACKAGES); do pi install npm:$$p || exit 1; done
 	@# pi-playwright depends on @playwright/cli by a range, and every release of
 	@# that pins a playwright-core which accepts exactly one Chromium revision.
 	@# The browsers come from Nix, so the CLI is held at the release that matches

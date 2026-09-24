@@ -131,6 +131,7 @@ For `gh`, run `gh auth login --git-protocol ssh --skip-ssh-key` once per account
   [pi-subagents](https://pi.dev/packages/pi-subagents) (delegation to sub-agents),
   [rpiv-ask-user-question](https://pi.dev/packages/@juicesharp/rpiv-ask-user-question)
   (structured questions instead of guesses),
+  [pi-web-access](https://pi.dev/packages/pi-web-access) (web search and fetching),
   [pi-playwright](https://pi.dev/packages/pi-playwright) (a browser through `@playwright/cli`,
   on hosts with `devEnv.languages.playwright.enable`; `agents/setup` pins its CLI to the
   release matching the Chromium from Nix), rtk's Claude Code hook (`rtk init -g`), and the
@@ -141,6 +142,9 @@ For `gh`, run `gh auth login --git-protocol ssh --skip-ssh-key` once per account
   (`prefix+ctrl+r`, since `prefix+shift+r` is herdr's own `reload_config`).
   Pi packages can't be declared in Nix: `pi install` writes `~/.pi/agent/settings.json`,
   which pi itself rewrites at runtime (theme, default model), so home-manager can't own it.
+  Instead, `agents/setup` installs them at the versions in `PI_PACKAGES`. Pinned packages
+  don't trigger pi's "Package Updates Available" notice; upgrade by bumping a pin and
+  re-running `make agents/setup`.
 
 ### Prebuilt binaries and nix-ld
 
