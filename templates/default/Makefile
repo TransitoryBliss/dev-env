@@ -111,12 +111,15 @@ ifneq ($(DEV_ENV),)
 	rsync -av --delete $(RSYNC_EXCLUDES) $(DEV_ENV)/ $(NIXUSER)@$(NIXADDR):~/$(BASE_DIR)/
 endif
 
-# SSH in, forwarding devEnv.proxy to the Mac: every browser UI in the machine
-# is at http://<name>.localhost:8090 (psm, plannotator, md). LogLevel=ERROR
-# keeps refused forwards (a stale tab retrying) from flooding the terminal.
+# SSH in and attach to herdr (or start it), forwarding devEnv.proxy to the Mac:
+# every browser UI in the machine is at http://<name>.localhost:8090 (psm,
+# plannotator, md). `make vm/ssh SSH_CMD=` gives a plain shell instead.
+# LogLevel=ERROR keeps refused forwards (a stale tab retrying) from flooding
+# the terminal. -t because ssh allocates no terminal when given a command.
+SSH_CMD ?= herdr
 vm/ssh:
 	@test "$(NIXADDR)" != "unset" || (echo "set NIXADDR=<vm-ip>" && exit 1)
-	ssh -o LogLevel=ERROR -L 8090:localhost:8090 $(NIXUSER)@$(NIXADDR)
+	ssh -t -o LogLevel=ERROR -L 8090:localhost:8090 $(NIXUSER)@$(NIXADDR) $(SSH_CMD)
 
 # Run inside the machine (VM or WSL), from this repo.
 switch:
