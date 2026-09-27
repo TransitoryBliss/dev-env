@@ -11,6 +11,7 @@ there; this repo holds only what's specific to me and my machines.
 | `nvim/`             | Neovim config (lazy.nvim, LSP, treesitter), linked to `~/.config/nvim` |
 | `herdr/config.toml` | herdr config, linked to `~/.config/herdr/config.toml`        |
 | `Makefile`          | Install and rebuild helpers                                  |
+| `Makefile.local`    | Optional, not included: your additions, e.g. `PI_PACKAGES += pi-linear@0.2.0` |
 
 ## First steps
 
@@ -86,6 +87,35 @@ After that, `make switch` inside WSL rebuilds; it picks the host from the hostna
    minute or two). It writes `nvim/lazy-lock.json` with the exact plugin commits — **commit
    that file**, it is what pins the plugins on every other machine. After pulling someone
    else's `lazy-lock.json`, run `nvim --headless "+Lazy! restore" +qa` to match it.
+
+## Secrets
+
+API keys for agent tools (e.g. `LINEAR_API_KEY` for pi-linear) live in `secrets.yaml`,
+encrypted with [sops](https://github.com/getsops/sops) and committed here. Each machine has
+its own [age](https://age-encryption.org) key, which never leaves it; `make switch` decrypts
+the file into `$XDG_RUNTIME_DIR` and every new zsh exports the variables you list.
+
+1. On each machine, create its key and note the public key it prints:
+   `mkdir -p ~/.config/sops/age && age-keygen -o ~/.config/sops/age/keys.txt`
+2. List every machine's public key in `.sops.yaml` here:
+
+   ```yaml
+   keys:
+     - &vm age1...
+     - &wsl age1...
+   creation_rules:
+     - path_regex: secrets\.yaml$
+       key_groups:
+         - age: [*vm, *wsl]
+   ```
+
+3. `sops secrets.yaml` opens an editor; add `linear_api_key: lin_api_...` and save.
+4. `git add .sops.yaml secrets.yaml`, uncomment `home.devEnv.secrets` in `users/<you>.nix`,
+   and `make switch`. New shells have `LINEAR_API_KEY`.
+
+After adding a machine to `.sops.yaml`, run `sops updatekeys secrets.yaml` on one that can
+already decrypt it. Anything an agent can see in its environment it can print, so prefer
+narrowly scoped keys (a read-only Linear key, if that is enough).
 
 ## Developing the base
 

@@ -19,6 +19,12 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # devEnv.secrets: sops-encrypted environment variables.
+    sops-nix = {
+      url = "github:Mic92/sops-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     herdr.url = "github:herdrdev/herdr/v0.9.1";
   };
 

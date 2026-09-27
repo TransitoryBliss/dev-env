@@ -30,6 +30,13 @@
       # Pi Session Manager: browse, search and resume agent sessions in a
       # browser, at http://psm.localhost:8090 (needs proxy.enable below).
       # home.devEnv.sessionManager.enable = true;
+
+      # Secrets as environment variables (API keys for agent tools), from a
+      # sops-encrypted file committed here. See the README's "Secrets".
+      # home.devEnv.secrets = {
+      #   sopsFile = ../secrets.yaml;
+      #   env.LINEAR_API_KEY = "linear_api_key";
+      # };
     };
 
     # Local reverse proxy for web UIs in the machine, one hostname each on

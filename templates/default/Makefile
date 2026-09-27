@@ -39,6 +39,11 @@ PI_PACKAGES = \
 	pi-playwright@0.1.2 \
 	pi-web-access@0.31.0
 
+# Optional, per-config additions to the variables above, e.g.
+#   PI_PACKAGES += pi-linear@0.2.0
+# Keep this Makefile identical across configs and put your extras there.
+-include Makefile.local
+
 BASE_DIR = .cache/dev-env-base
 ifneq ($(DEV_ENV),)
 # From the Mac, DEV_ENV is synced to BASE_DIR in the VM; inside the machine it's used as is.

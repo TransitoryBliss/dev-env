@@ -36,6 +36,7 @@ it (see below).
 | `pkgs/pi-session-manager/` | Built from source, with our `Cargo.lock` and `security.patch`. |
 | `modules/nixos/proxy.nix` | `devEnv.proxy`: Caddy on one localhost port, a `<name>.localhost` vhost per service. |
 | `modules/home/session-manager.nix` | `devEnv.sessionManager`: PSM user service and pi extension. |
+| `modules/home/secrets.nix` | `devEnv.secrets`: sops-nix, exports decrypted secrets from `.zshenv`. |
 
 - **Unfree packages:** add names to `devEnv.unfreePackages`. Don't set
   `nixpkgs.config.allowUnfreePredicate` anywhere else; two definitions of a function don't merge.
@@ -174,6 +175,11 @@ commit its `flake.lock`.
 - **herdr:** plugin commands (`herdr plugin list/install`) need a running server; the
   template's `agents/setup` starts `herdr server` in the background. Known conflict:
   herdr-annotate's suggested `prefix+o` clashes with herdr's own default for notifications.
+- **Secrets never go through Nix values.** `devEnv.secrets.env` maps variable names to keys in
+  the sops file; `.zshenv` reads the decrypted file (`~/.config/sops-nix/secrets/<key>`) at
+  shell start, so values never reach the store. sops-nix's home-manager module is imported on
+  every host and inert while `sops.secrets` is empty, which is why `sopsFile = null` is safe.
+  The age key is per machine at `~/.config/sops/age/keys.txt`, the sops CLI's default.
 - **WSL:** renaming NixOS-WSL's default user requires `nixos-rebuild boot` plus a distro
   restart, not `switch` (see the template README). NixOS-WSL is imported on every host and
   inert unless `wsl.enable`. The `xdg-open` shim on WSL calls `explorer.exe`, which always

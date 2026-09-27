@@ -77,6 +77,7 @@ Home level, under `devEnv.user.home`:
 | `devEnv.git.overrides."<host/owner>"` | The same, for repos under one org or user            |
 | `devEnv.terminalPalette`             | `"gruvbox-dark"`, `"catppuccin-mocha"` or null (default null) |
 | `devEnv.sessionManager.enable`       | Pi Session Manager: server, web UI and pi extension  |
+| `devEnv.secrets.sopsFile` / `.env`   | Environment variables from a sops-encrypted file (see the template README) |
 
 ## Git identities and repositories
 
@@ -164,7 +165,9 @@ For `gh`, run `gh auth login --git-protocol ssh --skip-ssh-key` once per account
   which pi itself rewrites at runtime (theme, default model), so home-manager can't own it.
   Instead, `agents/setup` installs them at the versions in `PI_PACKAGES`. Pinned packages
   don't trigger pi's "Package Updates Available" notice; upgrade by bumping a pin and
-  re-running `make agents/setup`.
+  re-running `make agents/setup`. Packages only one config wants go in an optional
+  `Makefile.local` (`PI_PACKAGES += name@version`), which the Makefile `-include`s, so the
+  Makefile itself stays the same as the template's.
 
 ### Prebuilt binaries and nix-ld
 
