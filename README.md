@@ -175,8 +175,11 @@ For `gh`, run `gh auth login --git-protocol ssh --skip-ssh-key` once per account
 ### MCP servers and OAuth
 
 `devEnv.mcp` writes pi-mcp-adapter config. Global servers go in `~/.config/mcp/mcp.json`.
-A scope such as `"github.com/some-org"` writes `~/source/github.com/some-org/.mcp.json` and
-lists that directory in `settings.ancestorConfigRoots`, so pi loads it in every repo below it.
+A scope such as `"github.com/some-org"` writes `~/source/github.com/some-org/.mcp.json`, and
+`settings.ancestorConfigRoots` is set to your home directory, so pi loads it in every repo below it. (With the
+scope's own directory as the root, the adapter prints a warning several times on every start
+outside it.) This also means pi reads any `.mcp.json` in a directory between `~` and the cwd,
+not just the cwd's own.
 Pi-only fields (`oauth`, and `disabled` flags for global servers in a scope with
 `inheritGlobal = false`) go in the scope's `.pi/mcp.json`, so `.mcp.json` stays in the shared
 format.

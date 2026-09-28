@@ -9,11 +9,14 @@
 #   };
 #
 # `servers` go in ~/.config/mcp/mcp.json. A scope's servers go in
-# ~/source/<host/owner>/.mcp.json, and that directory is listed in
-# settings.ancestorConfigRoots, so pi loads it anywhere below it (repos
-# included; a repo's own .mcp.json still wins). Pi-only fields (oauth, and the
-# `disabled` flags that hide global servers) go in the scope's .pi/mcp.json, so
-# .mcp.json stays in the format other tools read.
+# ~/source/<host/owner>/.mcp.json. settings.ancestorConfigRoots is the home
+# directory, so pi also reads .mcp.json files in the directories between ~ and
+# the cwd, and loads a scope's file anywhere below it (repos included; a repo's
+# own .mcp.json still wins). The root is ~ rather than each scope's directory
+# because pi-mcp-adapter warns, several times per start, about every root that
+# doesn't contain the cwd. Pi-only fields (oauth, and the `disabled` flags that
+# hide global servers) go in the scope's .pi/mcp.json, so .mcp.json stays in
+# the format other tools read.
 #
 # OAuth: pi-mcp-adapter's callback listens on a random port unless the server
 # has a fixed redirectUri. `oauth = true` sets one on callbackPort, which
@@ -92,7 +95,8 @@ in
   config = lib.mkIf enabled {
     xdg.configFile."mcp/mcp.json".source = jsonFormat.generate "mcp.json" {
       mcpServers = lib.mapAttrs (_: full) cfg.servers;
-      settings.ancestorConfigRoots = map (owner: "~/source/${owner}") (lib.attrNames cfg.scopes);
+      # Absolute: the adapter accepts "~/..." but not a bare "~".
+      settings.ancestorConfigRoots = lib.optionals (cfg.scopes != { }) [ config.home.homeDirectory ];
     };
 
     home.file = lib.concatMapAttrs (owner: scope: {

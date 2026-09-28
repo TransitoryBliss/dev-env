@@ -37,7 +37,7 @@ it (see below).
 | `modules/nixos/proxy.nix` | `devEnv.proxy`: Caddy on one localhost port, a `<name>.localhost` vhost per service. |
 | `modules/home/session-manager.nix` | `devEnv.sessionManager`: PSM user service and pi extension. |
 | `modules/home/secrets.nix` | `devEnv.secrets`: sops-nix, exports decrypted secrets from `.zshenv`. |
-| `modules/home/mcp.nix` | `devEnv.mcp`: MCP servers for pi, global and per `host/owner` scope (via `ancestorConfigRoots`), fixed OAuth callback port. |
+| `modules/home/mcp.nix` | `devEnv.mcp`: MCP servers for pi, global and per `host/owner` scope (via `ancestorConfigRoots` = the home directory, absolute since a bare `~` is rejected: per-scope roots make the adapter warn outside them), fixed OAuth callback port. |
 
 - **Unfree packages:** add names to `devEnv.unfreePackages`. Don't set
   `nixpkgs.config.allowUnfreePredicate` anywhere else; two definitions of a function don't merge.
