@@ -78,6 +78,9 @@ Home level, under `devEnv.user.home`:
 | `devEnv.terminalPalette`             | `"gruvbox-dark"`, `"catppuccin-mocha"` or null (default null) |
 | `devEnv.sessionManager.enable`       | Pi Session Manager: server, web UI and pi extension  |
 | `devEnv.secrets.sopsFile` / `.env`   | Environment variables from a sops-encrypted file (see the template README) |
+| `devEnv.mcp.servers`                 | MCP servers for pi in every directory (`~/.config/mcp/mcp.json`) |
+| `devEnv.mcp.scopes."<host/owner>"`   | MCP servers for repos under one org or user; `inheritGlobal = false` hides the global ones |
+| `devEnv.mcp.callbackPort`            | Fixed OAuth callback port (default 19876), forwarded by `make vm/ssh` |
 
 ## Git identities and repositories
 
@@ -168,6 +171,24 @@ For `gh`, run `gh auth login --git-protocol ssh --skip-ssh-key` once per account
   re-running `make agents/setup`. Packages only one config wants go in an optional
   `Makefile.local` (`PI_PACKAGES += name@version`), which the Makefile `-include`s, so the
   Makefile itself stays the same as the template's.
+
+### MCP servers and OAuth
+
+`devEnv.mcp` writes pi-mcp-adapter config. Global servers go in `~/.config/mcp/mcp.json`.
+A scope such as `"github.com/some-org"` writes `~/source/github.com/some-org/.mcp.json` and
+lists that directory in `settings.ancestorConfigRoots`, so pi loads it in every repo below it.
+Pi-only fields (`oauth`, and `disabled` flags for global servers in a scope with
+`inheritGlobal = false`) go in the scope's `.pi/mcp.json`, so `.mcp.json` stays in the shared
+format.
+
+By default the adapter's OAuth callback listens on a random localhost port, which a browser on
+the host can't reach. A server with `oauth = true` gets
+`redirectUri = http://127.0.0.1:<callbackPort>/callback`, and `make vm/ssh` forwards that port
+(`MCP_OAUTH_PORT`), so signing in from the Mac's browser just works. Only one pi process can
+hold the port at a time. For servers added any other way, copy the failed
+`localhost:…/callback?code=…` URL from the browser and paste it into pi (`/mcp-auth` offers
+this). The generated files are read-only store links: add servers in Nix, not with
+`/mcp setup`. Put secrets in `"${VAR}"` and export them with `devEnv.secrets`.
 
 ### Prebuilt binaries and nix-ld
 

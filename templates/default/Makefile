@@ -121,10 +121,14 @@ endif
 # plannotator, md). `make vm/ssh SSH_CMD=` gives a plain shell instead.
 # LogLevel=ERROR keeps refused forwards (a stale tab retrying) from flooding
 # the terminal. -t because ssh allocates no terminal when given a command.
+# MCP_OAUTH_PORT is devEnv.mcp.callbackPort, so pi's MCP OAuth callbacks
+# reach the machine from the Mac's browser.
 SSH_CMD ?= herdr
+MCP_OAUTH_PORT ?= 19876
 vm/ssh:
 	@test "$(NIXADDR)" != "unset" || (echo "set NIXADDR=<vm-ip>" && exit 1)
-	ssh -t -o LogLevel=ERROR -L 8090:localhost:8090 $(NIXUSER)@$(NIXADDR) $(SSH_CMD)
+	ssh -t -o LogLevel=ERROR -L 8090:localhost:8090 \
+		-L $(MCP_OAUTH_PORT):127.0.0.1:$(MCP_OAUTH_PORT) $(NIXUSER)@$(NIXADDR) $(SSH_CMD)
 
 # Run inside the machine (VM or WSL), from this repo.
 switch:
