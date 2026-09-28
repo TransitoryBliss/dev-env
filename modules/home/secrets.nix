@@ -12,8 +12,9 @@
 # key, which never leaves the machine. sops-nix decrypts on activation into
 # $XDG_RUNTIME_DIR (tmpfs) and links each secret under ~/.config/sops-nix.
 #
-# A scope applies in ~/source/<host/owner> and below, like git.overrides and
-# mcp.scopes: its variables replace the global ones there. The check runs at
+# A scope applies under <host/owner> in every devEnv.scopeRoots (~/source, and
+# the worktree root `wt` mirrors it into), like git.overrides and mcp.scopes:
+# its variables replace the global ones there. The check runs at
 # every shell start (.zshenv) and on every `cd` in an interactive shell, so a
 # program gets the keys of the directory it was started in.
 { inputs }:
@@ -48,7 +49,7 @@ let
 
   scopeCase = owner:
     let env = cfg.scopes.${owner}.env; in ''
-      ${lib.escapeShellArg "${config.home.homeDirectory}/source/${owner}"}/*)
+      ${lib.concatMapStringsSep "|" (root: "${lib.escapeShellArg "${root}/${owner}"}/*") config.devEnv.scopeRoots})
         unset ${lib.concatStringsSep " " (lib.attrNames env)}
       ${exports env}  ;;
     '';

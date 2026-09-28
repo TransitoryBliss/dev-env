@@ -31,7 +31,8 @@ it (see below).
 | `flake.nix` | Inputs, exports, example hosts. Modules are imported as `import ./modules/x { inherit inputs; }` (they're functions of the flake inputs), so consumers don't need to pass inputs. |
 | `modules/nixos/default.nix` | `devEnv.*` system options: user, platform, configDir, timeZone, unfreePackages. Wires home-manager for `devEnv.user.name`. |
 | `modules/nixos/{parallels,wsl}.nix` | One per `devEnv.platform`. Always imported; everything under `config = lib.mkIf (platform == …)`. |
-| `modules/home/*.nix` | Home-manager: `languages` (flags), `editor`, `git` (identities, ghq), `agents` (pi, Claude Code, rtk, herdr, plannotator). |
+| `modules/home/*.nix` | Home-manager: `languages` (flags), `editor`, `git` (identities, ghq, `wt`), `agents` (pi, Claude Code, rtk, herdr, plannotator). |
+| `modules/home/wt.zsh` | `wt`: worktree + herdr workspace + agent per task. Sourced from `git.nix`'s `initContent`. |
 | `pkgs/plannotator.nix` | Prebuilt binary per architecture. |
 | `pkgs/pi-session-manager/` | Built from source, with our `Cargo.lock` and `security.patch`. |
 | `modules/nixos/proxy.nix` | `devEnv.proxy`: Caddy on one localhost port, a `<name>.localhost` vhost per service. |
@@ -181,7 +182,7 @@ commit its `flake.lock`.
   shell start, so values never reach the store. sops-nix's home-manager module is imported on
   every host and inert while `sops.secrets` is empty, which is why `sopsFile = null` is safe.
   The age key is per machine at `~/.config/sops/age/keys.txt`, the sops CLI's default.
-  `scopes` works by path, like `mcp.scopes`: `_dev_env_secrets` in `.zshenv` unsets every
+  `scopes` works by path (under every `devEnv.scopeRoots`), like `mcp.scopes`: `_dev_env_secrets` in `.zshenv` unsets every
   managed variable, exports the global ones, then a matching scope's (longest prefix first), and
   a `chpwd` hook reruns it. A scope secret that fails to decrypt leaves the variable unset, never
   the global value: the wrong workspace's key is worse than none. sops-nix validates at *build*
@@ -197,6 +198,25 @@ commit its `flake.lock`.
   misleads: `,` opens a picker (and fails with "Failed to open tty") whenever several packages
   provide the command, and the command-not-found handler only suggests a package when stdout
   is a terminal. Test with a command only one package has (`, figlet ok`).
+- **`wt` (`modules/home/wt.zsh`)** is built on herdr's worktree API. `herdr worktree remove`
+  closes the workspace but keeps the branch, so `wt` deletes it, and only when nothing is lost.
+  Squash merges never make the branch an ancestor of the base, so "merged" also means a merged
+  PR (`gh`) whose `headRefOid` is the worktree's exact tip; commits pushed after the merge keep
+  it. `gc` keeps open worktrees with no commits: that is what a task that just started looks
+  like. `wt done` run inside the worktree's own workspace kills its own shell when the workspace
+  closes, so it finishes with `setsid -f` (log: `~/.local/state/wt.log`). Don't name a local
+  `path` or `status` in it: zsh ties `path` to `$PATH`, and `status` is read-only. Field
+  separators are `\x1f`, not tabs: `read` collapses runs of tabs and shifts empty fields.
+  To test without starting pi: `WT_AGENT=true`, `wt -b <branch>` (no focus change), in a scratch
+  repo with a local bare `origin`; drive `wt done` inside a worktree with `herdr pane run`.
+  `--cwd` on a repo with no herdr workspace opens one for it, so close that afterwards.
+  **Worktree layout:** `wt` passes `--path $_WT_ROOT/<host>/<owner>/<repo>/<branch>`
+  (`devEnv.git.worktreeRoot`), mirroring `~/source`, so path-scoped config applies in
+  worktrees too. Keep them out of `~/source`: ghq lists any directory with a `.git` in it,
+  dot-directories included. Anything that scopes by path must cover every
+  `devEnv.scopeRoots` (`mcp.nix` and `secrets.nix` do); git identities don't need it, since
+  a worktree's gitdir is inside its main checkout. `_WT_ROOT`/`_WT_SRC` come from `git.nix`,
+  so the detached `zsh -f` in `wt done` gets them passed explicitly.
 - **Makefile:** `HOST` defaults to the hostname on NixOS, and is only overridable from the
   command line. zsh's `HOST` variable must not leak in.
 

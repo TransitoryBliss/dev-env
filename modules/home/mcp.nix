@@ -9,7 +9,8 @@
 #   };
 #
 # `servers` go in ~/.config/mcp/mcp.json. A scope's servers go in
-# ~/source/<host/owner>/.mcp.json. settings.ancestorConfigRoots is the home
+# <root>/<host/owner>/.mcp.json for each devEnv.scopeRoots (~/source and the
+# worktree root `wt` mirrors it into). settings.ancestorConfigRoots is the home
 # directory, so pi also reads .mcp.json files in the directories between ~ and
 # the cwd, and loads a scope's file anywhere below it (repos included; a repo's
 # own .mcp.json still wins). The root is ~ rather than each scope's directory
@@ -88,7 +89,7 @@ in
     scopes = lib.mkOption {
       type = lib.types.attrsOf scopeType;
       default = { };
-      description = ''Servers for repos under a "host/owner" prefix in ~/source, e.g. "github.com/some-org".'';
+      description = ''Servers for repos (and their `wt` worktrees) under a "host/owner" prefix in ~/source, e.g. "github.com/some-org".'';
     };
   };
 
@@ -99,14 +100,16 @@ in
       settings.ancestorConfigRoots = lib.optionals (cfg.scopes != { }) [ config.home.homeDirectory ];
     };
 
-    home.file = lib.concatMapAttrs (owner: scope: {
-      "source/${owner}/.mcp.json".source = jsonFormat.generate "mcp.json" {
-        mcpServers = lib.mapAttrs (_: standard) scope.servers;
-      };
-      "source/${owner}/.pi/mcp.json".source = jsonFormat.generate "pi-mcp.json" {
-        mcpServers = scopePiServers scope;
-      };
-    }) cfg.scopes;
+    # Under every scope root: ~/source, and the worktree root `wt` mirrors it into.
+    home.file = lib.concatMapAttrs (owner: scope: lib.mergeAttrsList (map (root:
+      let dir = lib.removePrefix "${config.home.homeDirectory}/" "${root}/${owner}"; in {
+        "${dir}/.mcp.json".source = jsonFormat.generate "mcp.json" {
+          mcpServers = lib.mapAttrs (_: standard) scope.servers;
+        };
+        "${dir}/.pi/mcp.json".source = jsonFormat.generate "pi-mcp.json" {
+          mcpServers = scopePiServers scope;
+        };
+      }) config.devEnv.scopeRoots)) cfg.scopes;
 
     # Used for servers with a pre-registered clientId; kept in step with callbackPort.
     home.sessionVariables.MCP_OAUTH_CALLBACK_PORT = toString cfg.callbackPort;

@@ -11,6 +11,12 @@
 # an override's URLs are rewritten to an SSH host alias ("github.com-Bar") that
 # carries its key. Plain github.com uses the default key. Name and email are
 # picked by the repo's remote URL or its path under ~/source.
+#
+# `wt` puts worktrees in devEnv.git.worktreeRoot, mirroring the ~/source layout
+# (<root>/<host>/<owner>/<repo>/<branch>), so per-owner scopes apply there too:
+# modules that scope by path (mcp, secrets) cover every devEnv.scopeRoots.
+# Git identities need nothing extra: a worktree's gitdir is inside its main
+# checkout's .git.
 { config, lib, pkgs, ... }:
 
 let
@@ -102,9 +108,30 @@ in
       default = { };
       description = ''Identities for specific "host/owner" prefixes, e.g. "github.com/some-org".'';
     };
+    worktreeRoot = lib.mkOption {
+      type = lib.types.str;
+      default = "${home}/.herdr/worktrees";
+      description = ''
+        Where `wt` puts worktrees, as <root>/<host>/<owner>/<repo>/<branch>: the
+        ~/source layout, so per-owner scopes apply in them. Outside ~/source, so
+        ghq doesn't list them as repos. Must be under the home directory.
+      '';
+    };
+  };
+
+  options.devEnv.scopeRoots = lib.mkOption {
+    type = lib.types.listOf lib.types.str;
+    readOnly = true;
+    default = [ "${home}/source" cfg.worktreeRoot ];
+    description = ''Directories laid out as <host>/<owner>/...: per-owner scopes (mcp, secrets) apply under each.'';
   };
 
   config = {
+    assertions = [{
+      assertion = lib.hasPrefix "${home}/" cfg.worktreeRoot;
+      message = "devEnv.git.worktreeRoot must be under ${home}: scope files are placed there with home.file.";
+    }];
+
     home.packages = [ pkgs.ghq devenvKeys ];
 
     programs.git = {
@@ -124,11 +151,14 @@ in
     };
 
     # `repo [query]`: fuzzy-jump to a repo under ~/source.
+    # `wt`: one worktree, herdr workspace and agent per task (see wt.zsh).
     programs.zsh.initContent = ''
       repo() {
         local dir
         dir=$(ghq list | fzf --query="$*" --select-1) && cd "$(ghq root)/$dir"
       }
+      typeset -g _WT_SRC=${lib.escapeShellArg "${home}/source"} _WT_ROOT=${lib.escapeShellArg cfg.worktreeRoot}
+      source ${./wt.zsh}
     '';
   };
 }

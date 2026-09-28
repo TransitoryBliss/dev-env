@@ -75,6 +75,7 @@ Home level, under `devEnv.user.home`:
 | `devEnv.languages.playwright.enable` | Playwright's browsers from Nix, for the pi-playwright skill |
 | `devEnv.git.default`                 | `{ account, name, email }` used everywhere by default |
 | `devEnv.git.overrides."<host/owner>"` | The same, for repos under one org or user            |
+| `devEnv.git.worktreeRoot`            | Where `wt` puts worktrees (default `~/.herdr/worktrees`), laid out like `~/source` |
 | `devEnv.terminalPalette`             | `"gruvbox-dark"`, `"catppuccin-mocha"` or null (default null) |
 | `devEnv.sessionManager.enable`       | Pi Session Manager: server, web UI and pi extension  |
 | `devEnv.secrets.sopsFile` / `.env`   | Environment variables from a sops-encrypted file (see the template README) |
@@ -87,6 +88,16 @@ Home level, under `devEnv.user.home`:
 
 Repos live at `~/source/<host>/<owner>/<repo>`, managed by [ghq](https://github.com/x-motemen/ghq).
 `ghq get owner/repo` clones there, and `repo [query]` jumps to one with fzf.
+
+**One worktree per task:** inside herdr, `wt <branch> [prompt]` creates a git worktree off the
+default branch, opens it as its own herdr workspace and starts pi there (`$WT_AGENT`), so
+parallel agents never share a checkout. `-b` does it without switching to it. Worktrees live in
+`~/.herdr/worktrees/<host>/<owner>/<repo>/<branch>`: outside `~/source`, so ghq doesn't list
+them, but laid out the same way, so per-org MCP servers and secrets apply in them too. `wt done` in a worktree removes it and
+its branch, but only if nothing would be lost: no uncommitted changes, and the branch is merged
+(squash merges are recognised through `gh`: a merged PR whose head is this exact commit) or has
+no commits the default branch lacks. `wt ls` shows every worktree and its state; `wt gc` removes
+the merged ones and closed ones with no new commits (`-n` to only list them).
 
 Every account gets its own SSH key, `~/.ssh/id_ed25519_<account>`. Git uses the default
 identity everywhere, except in repos whose remote, or path under `~/source`, matches an override.
