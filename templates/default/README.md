@@ -113,6 +113,16 @@ the file into `$XDG_RUNTIME_DIR` and every new zsh exports the variables you lis
 4. `git add .sops.yaml secrets.yaml`, uncomment `home.devEnv.secrets` in `users/<you>.nix`,
    and `make switch`. New shells have `LINEAR_API_KEY`.
 
+Different keys per org (say, a second Linear workspace) go in a scope, like `git.overrides`:
+
+```nix
+home.devEnv.secrets.scopes."github.com/some-org".env.LINEAR_API_KEY = "some_org_linear_api_key";
+```
+
+Under `~/source/github.com/some-org` that key replaces the global one; `cd` switches back and
+forth. A running program (pi) keeps the keys of the directory it was started in. Add the key to
+`secrets.yaml` first: `make switch` fails on a key the file doesn't have.
+
 After adding a machine to `.sops.yaml`, run `sops updatekeys secrets.yaml` on one that can
 already decrypt it. Anything an agent can see in its environment it can print, so prefer
 narrowly scoped keys (a read-only Linear key, if that is enough).

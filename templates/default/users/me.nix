@@ -36,6 +36,8 @@
       # home.devEnv.secrets = {
       #   sopsFile = ../secrets.yaml;
       #   env.LINEAR_API_KEY = "linear_api_key";
+      #   # A different key in repos under one org (like git.overrides).
+      #   # scopes."github.com/some-org".env.LINEAR_API_KEY = "some_org_linear_api_key";
       # };
 
       # MCP servers for pi: everywhere, and per org (like git.overrides).

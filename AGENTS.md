@@ -36,7 +36,7 @@ it (see below).
 | `pkgs/pi-session-manager/` | Built from source, with our `Cargo.lock` and `security.patch`. |
 | `modules/nixos/proxy.nix` | `devEnv.proxy`: Caddy on one localhost port, a `<name>.localhost` vhost per service. |
 | `modules/home/session-manager.nix` | `devEnv.sessionManager`: PSM user service and pi extension. |
-| `modules/home/secrets.nix` | `devEnv.secrets`: sops-nix, exports decrypted secrets from `.zshenv`. |
+| `modules/home/secrets.nix` | `devEnv.secrets`: sops-nix, exports decrypted secrets from `.zshenv`, globally and per `host/owner` scope (re-checked on `cd`). |
 | `modules/home/mcp.nix` | `devEnv.mcp`: MCP servers for pi, global and per `host/owner` scope (via `ancestorConfigRoots` = the home directory, absolute since a bare `~` is rejected: per-scope roots make the adapter warn outside them), fixed OAuth callback port. |
 
 - **Unfree packages:** add names to `devEnv.unfreePackages`. Don't set
@@ -181,6 +181,12 @@ commit its `flake.lock`.
   shell start, so values never reach the store. sops-nix's home-manager module is imported on
   every host and inert while `sops.secrets` is empty, which is why `sopsFile = null` is safe.
   The age key is per machine at `~/.config/sops/age/keys.txt`, the sops CLI's default.
+  `scopes` works by path, like `mcp.scopes`: `_dev_env_secrets` in `.zshenv` unsets every
+  managed variable, exports the global ones, then a matching scope's (longest prefix first), and
+  a `chpwd` hook reruns it. A scope secret that fails to decrypt leaves the variable unset, never
+  the global value: the wrong workspace's key is worse than none. sops-nix validates at *build*
+  time that every declared key exists in the file, so add the key with `sops` before declaring it.
+  A running program keeps the keys of the directory it started in.
 - **WSL:** renaming NixOS-WSL's default user requires `nixos-rebuild boot` plus a distro
   restart, not `switch` (see the template README). NixOS-WSL is imported on every host and
   inert unless `wsl.enable`. The `xdg-open` shim on WSL calls `explorer.exe`, which always

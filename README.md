@@ -78,6 +78,7 @@ Home level, under `devEnv.user.home`:
 | `devEnv.terminalPalette`             | `"gruvbox-dark"`, `"catppuccin-mocha"` or null (default null) |
 | `devEnv.sessionManager.enable`       | Pi Session Manager: server, web UI and pi extension  |
 | `devEnv.secrets.sopsFile` / `.env`   | Environment variables from a sops-encrypted file (see the template README) |
+| `devEnv.secrets.scopes."<host/owner>".env` | The same, replacing the global ones in repos under one org or user |
 | `devEnv.mcp.servers`                 | MCP servers for pi in every directory (`~/.config/mcp/mcp.json`) |
 | `devEnv.mcp.scopes."<host/owner>"`   | MCP servers for repos under one org or user; `inheritGlobal = false` hides the global ones |
 | `devEnv.mcp.callbackPort`            | Fixed OAuth callback port (default 19876), forwarded by `make vm/ssh` |
