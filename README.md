@@ -135,6 +135,12 @@ For `gh`, run `gh auth login --git-protocol ssh --skip-ssh-key` once per account
   by what's already typed, so `n` then Up cycles only commands starting with `n`. The keymap is
   emacs. `ZSH_CUSTOM` is `~/.local/share/oh-my-zsh-custom`, writable so herdr's Oh My Zsh
   plugin can link itself in; Oh My Zsh's own `custom/` is a read-only store path.
+- **Programs you don't have installed:** `, <cmd>` ([comma](https://github.com/nix-community/comma))
+  runs a program from nixpkgs once, without installing it (`, figlet hi`). When several
+  packages provide the command, it asks which one. An unknown command at the prompt names the
+  package that has it. Both use the prebuilt index from
+  [nix-index-database](https://github.com/nix-community/nix-index-database), so nothing is
+  indexed locally.
 - **Terminal colours** come from `devEnv.terminalPalette` (`gruvbox-dark`,
   `catppuccin-mocha`, or null to leave the terminal alone; default null). Programs emit ANSI
   colour *indices*, and the terminal decides what they look like — a palette that normally

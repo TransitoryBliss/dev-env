@@ -185,6 +185,12 @@ commit its `flake.lock`.
   restart, not `switch` (see the template README). NixOS-WSL is imported on every host and
   inert unless `wsl.enable`. The `xdg-open` shim on WSL calls `explorer.exe`, which always
   exits 1.
+- **comma / nix-index** come from the `nix-index-database` input's home-manager module (imported
+  in `modules/home/default.nix`), which ships a prebuilt index; don't also add `nix-index` or
+  `comma` to `home.packages`, they conflict with its wrappers. Testing them non-interactively
+  misleads: `,` opens a picker (and fails with "Failed to open tty") whenever several packages
+  provide the command, and the command-not-found handler only suggests a package when stdout
+  is a terminal. Test with a command only one package has (`, figlet ok`).
 - **Makefile:** `HOST` defaults to the hostname on NixOS, and is only overridable from the
   command line. zsh's `HOST` variable must not leak in.
 

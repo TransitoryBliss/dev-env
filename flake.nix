@@ -26,6 +26,12 @@
     };
 
     herdr.url = "github:herdrdev/herdr/v0.9.1";
+
+    # Prebuilt nix-index database, for comma (`, <cmd>`) and command-not-found.
+    nix-index-database = {
+      url = "github:nix-community/nix-index-database";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = inputs@{ self, nixpkgs, ... }: {

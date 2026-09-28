@@ -18,6 +18,7 @@ in
     (import ./secrets.nix { inherit inputs; })
     ./session-manager.nix
     ./terminal.nix
+    inputs.nix-index-database.homeModules.default
   ];
 
   options.devEnv.configDir = lib.mkOption {
@@ -35,6 +36,11 @@ in
       htop
       tree
     ];
+
+    # `, <cmd>` runs a program from nixpkgs once, without installing it. The
+    # database is prebuilt (nix-index-database), so nothing indexes locally.
+    # nix-index also gives zsh a command-not-found handler naming the package.
+    programs.nix-index-database.comma.enable = true;
 
     programs.zsh = {
       enable = true;
