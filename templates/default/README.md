@@ -189,8 +189,16 @@ also stops Claude Code deleting transcripts after 30 days.
    `systemctl --user start restic-backups-agent-sessions`, then
    `restic-agent-sessions snapshots` and `restic-agent-sessions ls latest`.
 
-To restore on a new machine (same username: pi's folder names contain the home path):
-`restic-agent-sessions restore latest --target /`.
+To restore on a new machine (same username: pi's folder names contain the home path), before
+starting pi there. Restore into `/tmp`, not `/`, which would also restore the metadata of
+`/home` and your home directory; name the old machine, since snapshots are per host:
+
+```sh
+systemctl --user stop restic-backups-agent-sessions.timer
+restic-agent-sessions restore latest --host <old-host> --target /tmp/sessions-restore
+rsync -a /tmp/sessions-restore/home/<you>/ ~/ && rm -rf /tmp/sessions-restore
+systemctl --user start restic-backups-agent-sessions.timer
+```
 
 ## Developing the base
 
