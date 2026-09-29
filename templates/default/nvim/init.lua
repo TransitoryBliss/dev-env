@@ -8,8 +8,6 @@ vim.api.nvim_set_keymap("n", "<leader>o", "<cmd>Octo<cr>", { desc = "Octo" })
 vim.api.nvim_set_keymap("n", "<C-p>", ':lua require("fzf-lua").files()<CR>', { noremap = true, silent = true })
 vim.api.nvim_set_keymap("n", "<C-f>", ':lua require("fzf-lua").live_grep()<CR>', { noremap = true, silent = true })
 
-vim.cmd.colorscheme("gruvbox")
-
 vim.o.relativenumber = true
 vim.o.number = true
 

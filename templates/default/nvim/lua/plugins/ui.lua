@@ -10,7 +10,8 @@ return {
 		dependencies = { "nvim-tree/nvim-web-devicons" },
 		event = "VeryLazy",
 		opts = {
-			options = { theme = "gruvbox" },
+			-- Derived from whatever colorscheme devEnv.theme picked.
+			options = { theme = "auto" },
 		},
 	},
 }

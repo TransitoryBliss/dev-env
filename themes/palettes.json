@@ -1,0 +1,930 @@
+{
+  "ayu-dark": {
+    "ansi": [
+      "#11151c",
+      "#ea6c73",
+      "#7fd962",
+      "#f9af4f",
+      "#53bdfa",
+      "#cda1fa",
+      "#90e1c6",
+      "#c7c7c7",
+      "#686868",
+      "#f07178",
+      "#aad94c",
+      "#ffb454",
+      "#59c2ff",
+      "#d2a6ff",
+      "#95e6cb",
+      "#ffffff"
+    ],
+    "appearance": "dark",
+    "background": "#0b0e14",
+    "cursor": "#e6b450",
+    "foreground": "#bfbdb6",
+    "nvim": {
+      "colorscheme": "ayu-dark",
+      "family": "ayu"
+    },
+    "source": "iTerm2-Color-Schemes@99d9701 ghostty/Ayu"
+  },
+  "ayu-light": {
+    "ansi": [
+      "#000000",
+      "#ea6c6d",
+      "#6cbf43",
+      "#eca944",
+      "#3199e1",
+      "#9e75c7",
+      "#46ba94",
+      "#bababa",
+      "#686868",
+      "#f07171",
+      "#86b300",
+      "#f2ae49",
+      "#399ee6",
+      "#a37acc",
+      "#4cbf99",
+      "#d1d1d1"
+    ],
+    "appearance": "light",
+    "background": "#f8f9fa",
+    "cursor": "#ffaa33",
+    "foreground": "#5c6166",
+    "nvim": {
+      "colorscheme": "ayu-light",
+      "family": "ayu"
+    },
+    "source": "iTerm2-Color-Schemes@99d9701 ghostty/Ayu Light"
+  },
+  "ayu-mirage": {
+    "ansi": [
+      "#171b24",
+      "#ed8274",
+      "#87d96c",
+      "#facc6e",
+      "#6dcbfa",
+      "#dabafa",
+      "#90e1c6",
+      "#c7c7c7",
+      "#686868",
+      "#f28779",
+      "#d5ff80",
+      "#ffd173",
+      "#73d0ff",
+      "#dfbfff",
+      "#95e6cb",
+      "#ffffff"
+    ],
+    "appearance": "dark",
+    "background": "#1f2430",
+    "cursor": "#ffcc66",
+    "foreground": "#cccac2",
+    "nvim": {
+      "colorscheme": "ayu-mirage",
+      "family": "ayu"
+    },
+    "source": "iTerm2-Color-Schemes@99d9701 ghostty/Ayu Mirage"
+  },
+  "carbonfox": {
+    "ansi": [
+      "#282828",
+      "#ee5396",
+      "#25be6a",
+      "#08bdba",
+      "#78a9ff",
+      "#be95ff",
+      "#33b1ff",
+      "#dfdfe0",
+      "#484848",
+      "#f16da6",
+      "#46c880",
+      "#2dc7c4",
+      "#8cb6ff",
+      "#c8a5ff",
+      "#52bdff",
+      "#e4e4e5"
+    ],
+    "appearance": "dark",
+    "background": "#161616",
+    "cursor": "#f2f4f8",
+    "foreground": "#f2f4f8",
+    "nvim": {
+      "colorscheme": "carbonfox",
+      "family": "nightfox"
+    },
+    "source": "iTerm2-Color-Schemes@99d9701 ghostty/Carbonfox"
+  },
+  "catppuccin-frappe": {
+    "ansi": [
+      "#51576d",
+      "#e78284",
+      "#a6d189",
+      "#e5c890",
+      "#8caaee",
+      "#f4b8e4",
+      "#81c8be",
+      "#b5bfe2",
+      "#626880",
+      "#eda0a2",
+      "#b9dba2",
+      "#ecd7ae",
+      "#adc2f3",
+      "#f38ed8",
+      "#98d2ca",
+      "#a5adce"
+    ],
+    "appearance": "dark",
+    "background": "#303446",
+    "cursor": "#f2d5cf",
+    "foreground": "#c6d0f5",
+    "nvim": {
+      "colorscheme": "catppuccin-frappe",
+      "family": "catppuccin"
+    },
+    "source": "iTerm2-Color-Schemes@99d9701 ghostty/Catppuccin Frappe"
+  },
+  "catppuccin-latte": {
+    "ansi": [
+      "#bcc0cc",
+      "#d20f39",
+      "#40a02b",
+      "#df8e1d",
+      "#1e66f5",
+      "#ea76cb",
+      "#179299",
+      "#5c5f77",
+      "#acb0be",
+      "#e7103f",
+      "#46b02f",
+      "#e49931",
+      "#3878f6",
+      "#ef95d7",
+      "#19a1a8",
+      "#6c6f85"
+    ],
+    "appearance": "light",
+    "background": "#eff1f5",
+    "cursor": "#dc8a78",
+    "foreground": "#4c4f69",
+    "nvim": {
+      "colorscheme": "catppuccin-latte",
+      "family": "catppuccin"
+    },
+    "source": "iTerm2-Color-Schemes@99d9701 ghostty/Catppuccin Latte"
+  },
+  "catppuccin-macchiato": {
+    "ansi": [
+      "#494d64",
+      "#ed8796",
+      "#a6da95",
+      "#eed49f",
+      "#8aadf4",
+      "#f5bde6",
+      "#8bd5ca",
+      "#b8c0e0",
+      "#5b6078",
+      "#f2a7b2",
+      "#bde3b0",
+      "#f4e3c1",
+      "#adc5f7",
+      "#f493da",
+      "#a5ded6",
+      "#a5adcb"
+    ],
+    "appearance": "dark",
+    "background": "#24273a",
+    "cursor": "#f4dbd6",
+    "foreground": "#cad3f5",
+    "nvim": {
+      "colorscheme": "catppuccin-macchiato",
+      "family": "catppuccin"
+    },
+    "source": "iTerm2-Color-Schemes@99d9701 ghostty/Catppuccin Macchiato"
+  },
+  "catppuccin-mocha": {
+    "ansi": [
+      "#45475a",
+      "#f38ba8",
+      "#a6e3a1",
+      "#f9e2af",
+      "#89b4fa",
+      "#f5c2e7",
+      "#94e2d5",
+      "#bac2de",
+      "#585b70",
+      "#f7aec2",
+      "#c2ecbf",
+      "#fcd682",
+      "#aeccfc",
+      "#f398da",
+      "#b1eae1",
+      "#a6adc8"
+    ],
+    "appearance": "dark",
+    "background": "#1e1e2e",
+    "cursor": "#f5e0dc",
+    "foreground": "#cdd6f4",
+    "nvim": {
+      "colorscheme": "catppuccin-mocha",
+      "family": "catppuccin"
+    },
+    "source": "iTerm2-Color-Schemes@99d9701 ghostty/Catppuccin Mocha"
+  },
+  "dayfox": {
+    "ansi": [
+      "#352c24",
+      "#a5222f",
+      "#396847",
+      "#ac5402",
+      "#2848a9",
+      "#6e33ce",
+      "#287980",
+      "#bfb6ae",
+      "#534c45",
+      "#b3434e",
+      "#577f63",
+      "#b86e28",
+      "#4863b6",
+      "#8452d5",
+      "#488d93",
+      "#f4ece6"
+    ],
+    "appearance": "light",
+    "background": "#f6f2ee",
+    "cursor": "#3d2b5a",
+    "foreground": "#3d2b5a",
+    "nvim": {
+      "colorscheme": "dayfox",
+      "family": "nightfox"
+    },
+    "source": "iTerm2-Color-Schemes@99d9701 ghostty/Dayfox"
+  },
+  "dracula": {
+    "ansi": [
+      "#21222c",
+      "#ff5555",
+      "#50fa7b",
+      "#f1fa8c",
+      "#bd93f9",
+      "#ff79c6",
+      "#8be9fd",
+      "#f8f8f2",
+      "#6272a4",
+      "#ff6e6e",
+      "#69ff94",
+      "#ffffa5",
+      "#d6acff",
+      "#ff92df",
+      "#a4ffff",
+      "#ffffff"
+    ],
+    "appearance": "dark",
+    "background": "#282a36",
+    "cursor": "#f8f8f2",
+    "foreground": "#f8f8f2",
+    "nvim": {
+      "colorscheme": "dracula",
+      "family": "dracula"
+    },
+    "source": "iTerm2-Color-Schemes@99d9701 ghostty/Dracula"
+  },
+  "everforest-dark": {
+    "ansi": [
+      "#7a8478",
+      "#e67e80",
+      "#a7c080",
+      "#dbbc7f",
+      "#7fbbb3",
+      "#d699b6",
+      "#83c092",
+      "#f2efdf",
+      "#a6b0a0",
+      "#f85552",
+      "#8da101",
+      "#dfa000",
+      "#3a94c5",
+      "#df69ba",
+      "#35a77c",
+      "#fffbef"
+    ],
+    "appearance": "dark",
+    "background": "#232a2e",
+    "cursor": "#e69875",
+    "foreground": "#d3c6aa",
+    "nvim": {
+      "colorscheme": "everforest",
+      "family": "everforest"
+    },
+    "source": "iTerm2-Color-Schemes@99d9701 ghostty/Everforest Dark Med"
+  },
+  "everforest-light": {
+    "ansi": [
+      "#7a8478",
+      "#e67e80",
+      "#9ab373",
+      "#c1a266",
+      "#7fbbb3",
+      "#d699b6",
+      "#83c092",
+      "#b2af9f",
+      "#a6b0a0",
+      "#f85552",
+      "#8da101",
+      "#dfa000",
+      "#3a94c5",
+      "#df69ba",
+      "#35a77c",
+      "#fffbef"
+    ],
+    "appearance": "light",
+    "background": "#efebd4",
+    "cursor": "#f57d26",
+    "foreground": "#5c6a72",
+    "nvim": {
+      "colorscheme": "everforest",
+      "family": "everforest"
+    },
+    "source": "iTerm2-Color-Schemes@99d9701 ghostty/Everforest Light Med"
+  },
+  "github-dark": {
+    "ansi": [
+      "#484f58",
+      "#ff7b72",
+      "#3fb950",
+      "#d29922",
+      "#58a6ff",
+      "#bc8cff",
+      "#39c5cf",
+      "#b1bac4",
+      "#6e7681",
+      "#ffa198",
+      "#56d364",
+      "#e3b341",
+      "#79c0ff",
+      "#d2a8ff",
+      "#56d4dd",
+      "#ffffff"
+    ],
+    "appearance": "dark",
+    "background": "#0d1117",
+    "cursor": "#2f81f7",
+    "foreground": "#e6edf3",
+    "nvim": {
+      "colorscheme": "github_dark_default",
+      "family": "github"
+    },
+    "source": "iTerm2-Color-Schemes@99d9701 ghostty/GitHub Dark Default"
+  },
+  "github-light": {
+    "ansi": [
+      "#24292f",
+      "#cf222e",
+      "#116329",
+      "#4d2d00",
+      "#0969da",
+      "#8250df",
+      "#1b7c83",
+      "#6e7781",
+      "#57606a",
+      "#a40e26",
+      "#1a7f37",
+      "#633c01",
+      "#218bff",
+      "#a475f9",
+      "#3192aa",
+      "#8c959f"
+    ],
+    "appearance": "light",
+    "background": "#ffffff",
+    "cursor": "#0969da",
+    "foreground": "#1f2328",
+    "nvim": {
+      "colorscheme": "github_light_default",
+      "family": "github"
+    },
+    "source": "iTerm2-Color-Schemes@99d9701 ghostty/GitHub Light Default"
+  },
+  "gruvbox-dark": {
+    "ansi": [
+      "#282828",
+      "#cc241d",
+      "#98971a",
+      "#d79921",
+      "#458588",
+      "#b16286",
+      "#689d6a",
+      "#a89984",
+      "#928374",
+      "#fb4934",
+      "#b8bb26",
+      "#fabd2f",
+      "#83a598",
+      "#d3869b",
+      "#8ec07c",
+      "#ebdbb2"
+    ],
+    "appearance": "dark",
+    "background": "#282828",
+    "cursor": "#ebdbb2",
+    "foreground": "#ebdbb2",
+    "nvim": {
+      "colorscheme": "gruvbox",
+      "family": "gruvbox"
+    },
+    "source": "iTerm2-Color-Schemes@99d9701 ghostty/Gruvbox Dark"
+  },
+  "gruvbox-light": {
+    "ansi": [
+      "#fbf1c7",
+      "#cc241d",
+      "#98971a",
+      "#d79921",
+      "#458588",
+      "#b16286",
+      "#689d6a",
+      "#7c6f64",
+      "#928374",
+      "#9d0006",
+      "#79740e",
+      "#b57614",
+      "#076678",
+      "#8f3f71",
+      "#427b58",
+      "#3c3836"
+    ],
+    "appearance": "light",
+    "background": "#fbf1c7",
+    "cursor": "#3c3836",
+    "foreground": "#3c3836",
+    "nvim": {
+      "colorscheme": "gruvbox",
+      "family": "gruvbox"
+    },
+    "source": "iTerm2-Color-Schemes@99d9701 ghostty/Gruvbox Light"
+  },
+  "kanagawa-dragon": {
+    "ansi": [
+      "#0d0c0c",
+      "#c4746e",
+      "#8a9a7b",
+      "#c4b28a",
+      "#8ba4b0",
+      "#a292a3",
+      "#8ea4a2",
+      "#c8c093",
+      "#a6a69c",
+      "#e46876",
+      "#87a987",
+      "#e6c384",
+      "#7fb4ca",
+      "#938aa9",
+      "#7aa89f",
+      "#c5c9c5"
+    ],
+    "appearance": "dark",
+    "background": "#181616",
+    "cursor": "#c8c093",
+    "foreground": "#c5c9c5",
+    "nvim": {
+      "colorscheme": "kanagawa-dragon",
+      "family": "kanagawa"
+    },
+    "source": "iTerm2-Color-Schemes@99d9701 ghostty/Kanagawa Dragon"
+  },
+  "kanagawa-lotus": {
+    "ansi": [
+      "#1f1f28",
+      "#c84053",
+      "#6f894e",
+      "#77713f",
+      "#4d699b",
+      "#b35b79",
+      "#597b75",
+      "#545464",
+      "#8a8980",
+      "#d7474b",
+      "#6e915f",
+      "#836f4a",
+      "#6693bf",
+      "#624c83",
+      "#5e857a",
+      "#43436c"
+    ],
+    "appearance": "light",
+    "background": "#f2ecbc",
+    "cursor": "#43436c",
+    "foreground": "#545464",
+    "nvim": {
+      "colorscheme": "kanagawa-lotus",
+      "family": "kanagawa"
+    },
+    "source": "iTerm2-Color-Schemes@99d9701 ghostty/Kanagawa Lotus"
+  },
+  "kanagawa-wave": {
+    "ansi": [
+      "#090618",
+      "#c34043",
+      "#76946a",
+      "#c0a36e",
+      "#7e9cd8",
+      "#957fb8",
+      "#6a9589",
+      "#c8c093",
+      "#727169",
+      "#e82424",
+      "#98bb6c",
+      "#e6c384",
+      "#7fb4ca",
+      "#938aa9",
+      "#7aa89f",
+      "#dcd7ba"
+    ],
+    "appearance": "dark",
+    "background": "#1f1f28",
+    "cursor": "#dcd7ba",
+    "foreground": "#dcd7ba",
+    "nvim": {
+      "colorscheme": "kanagawa-wave",
+      "family": "kanagawa"
+    },
+    "source": "iTerm2-Color-Schemes@99d9701 ghostty/Kanagawa Wave"
+  },
+  "monokai-pro": {
+    "ansi": [
+      "#2d2a2e",
+      "#ff6188",
+      "#a9dc76",
+      "#ffd866",
+      "#fc9867",
+      "#ab9df2",
+      "#78dce8",
+      "#fcfcfa",
+      "#727072",
+      "#ff6188",
+      "#a9dc76",
+      "#ffd866",
+      "#fc9867",
+      "#ab9df2",
+      "#78dce8",
+      "#fcfcfa"
+    ],
+    "appearance": "dark",
+    "background": "#2d2a2e",
+    "cursor": "#c1c0c0",
+    "foreground": "#fcfcfa",
+    "nvim": {
+      "colorscheme": "monokai-pro",
+      "family": "monokai-pro"
+    },
+    "source": "iTerm2-Color-Schemes@99d9701 ghostty/Monokai Pro"
+  },
+  "nightfox": {
+    "ansi": [
+      "#393b44",
+      "#c94f6d",
+      "#81b29a",
+      "#dbc074",
+      "#719cd6",
+      "#9d79d6",
+      "#63cdcf",
+      "#dfdfe0",
+      "#575860",
+      "#d16983",
+      "#8ebaa4",
+      "#e0c989",
+      "#86abdc",
+      "#baa1e2",
+      "#7ad5d6",
+      "#e4e4e5"
+    ],
+    "appearance": "dark",
+    "background": "#192330",
+    "cursor": "#cdcecf",
+    "foreground": "#cdcecf",
+    "nvim": {
+      "colorscheme": "nightfox",
+      "family": "nightfox"
+    },
+    "source": "iTerm2-Color-Schemes@99d9701 ghostty/Nightfox"
+  },
+  "nord": {
+    "ansi": [
+      "#3b4252",
+      "#bf616a",
+      "#a3be8c",
+      "#ebcb8b",
+      "#81a1c1",
+      "#b48ead",
+      "#88c0d0",
+      "#e5e9f0",
+      "#596377",
+      "#bf616a",
+      "#a3be8c",
+      "#ebcb8b",
+      "#81a1c1",
+      "#b48ead",
+      "#8fbcbb",
+      "#eceff4"
+    ],
+    "appearance": "dark",
+    "background": "#2e3440",
+    "cursor": "#eceff4",
+    "foreground": "#d8dee9",
+    "nvim": {
+      "colorscheme": "nord",
+      "family": "nord"
+    },
+    "source": "iTerm2-Color-Schemes@99d9701 ghostty/Nord"
+  },
+  "onedark": {
+    "ansi": [
+      "#21252b",
+      "#e06c75",
+      "#98c379",
+      "#e5c07b",
+      "#61afef",
+      "#c678dd",
+      "#56b6c2",
+      "#abb2bf",
+      "#767676",
+      "#e06c75",
+      "#98c379",
+      "#e5c07b",
+      "#61afef",
+      "#c678dd",
+      "#56b6c2",
+      "#abb2bf"
+    ],
+    "appearance": "dark",
+    "background": "#21252b",
+    "cursor": "#abb2bf",
+    "foreground": "#abb2bf",
+    "nvim": {
+      "colorscheme": "onedark",
+      "family": "onedark"
+    },
+    "source": "iTerm2-Color-Schemes@99d9701 ghostty/Atom One Dark"
+  },
+  "rose-pine": {
+    "ansi": [
+      "#26233a",
+      "#eb6f92",
+      "#31748f",
+      "#f6c177",
+      "#9ccfd8",
+      "#c4a7e7",
+      "#ebbcba",
+      "#e0def4",
+      "#6e6a86",
+      "#eb6f92",
+      "#31748f",
+      "#f6c177",
+      "#9ccfd8",
+      "#c4a7e7",
+      "#ebbcba",
+      "#e0def4"
+    ],
+    "appearance": "dark",
+    "background": "#191724",
+    "cursor": "#e0def4",
+    "foreground": "#e0def4",
+    "nvim": {
+      "colorscheme": "rose-pine-main",
+      "family": "rose-pine"
+    },
+    "source": "iTerm2-Color-Schemes@99d9701 ghostty/Rose Pine"
+  },
+  "rose-pine-dawn": {
+    "ansi": [
+      "#f2e9e1",
+      "#b4637a",
+      "#286983",
+      "#ea9d34",
+      "#56949f",
+      "#907aa9",
+      "#d7827e",
+      "#575279",
+      "#9893a5",
+      "#b4637a",
+      "#286983",
+      "#ea9d34",
+      "#56949f",
+      "#907aa9",
+      "#d7827e",
+      "#575279"
+    ],
+    "appearance": "light",
+    "background": "#faf4ed",
+    "cursor": "#575279",
+    "foreground": "#575279",
+    "nvim": {
+      "colorscheme": "rose-pine-dawn",
+      "family": "rose-pine"
+    },
+    "source": "iTerm2-Color-Schemes@99d9701 ghostty/Rose Pine Dawn"
+  },
+  "rose-pine-moon": {
+    "ansi": [
+      "#393552",
+      "#eb6f92",
+      "#3e8fb0",
+      "#f6c177",
+      "#9ccfd8",
+      "#c4a7e7",
+      "#ea9a97",
+      "#e0def4",
+      "#6e6a86",
+      "#eb6f92",
+      "#3e8fb0",
+      "#f6c177",
+      "#9ccfd8",
+      "#c4a7e7",
+      "#ea9a97",
+      "#e0def4"
+    ],
+    "appearance": "dark",
+    "background": "#232136",
+    "cursor": "#e0def4",
+    "foreground": "#e0def4",
+    "nvim": {
+      "colorscheme": "rose-pine-moon",
+      "family": "rose-pine"
+    },
+    "source": "iTerm2-Color-Schemes@99d9701 ghostty/Rose Pine Moon"
+  },
+  "solarized-dark": {
+    "ansi": [
+      "#073642",
+      "#dc322f",
+      "#859900",
+      "#b58900",
+      "#268bd2",
+      "#d33682",
+      "#2aa198",
+      "#eee8d5",
+      "#335e69",
+      "#cb4b16",
+      "#586e75",
+      "#657b83",
+      "#839496",
+      "#6c71c4",
+      "#93a1a1",
+      "#fdf6e3"
+    ],
+    "appearance": "dark",
+    "background": "#002b36",
+    "cursor": "#839496",
+    "foreground": "#839496",
+    "nvim": {
+      "colorscheme": "solarized",
+      "family": "solarized"
+    },
+    "source": "iTerm2-Color-Schemes@99d9701 ghostty/iTerm2 Solarized Dark"
+  },
+  "solarized-light": {
+    "ansi": [
+      "#073642",
+      "#dc322f",
+      "#859900",
+      "#b58900",
+      "#268bd2",
+      "#d33682",
+      "#2aa198",
+      "#bbb5a2",
+      "#002b36",
+      "#cb4b16",
+      "#586e75",
+      "#657b83",
+      "#839496",
+      "#6c71c4",
+      "#93a1a1",
+      "#fdf6e3"
+    ],
+    "appearance": "light",
+    "background": "#fdf6e3",
+    "cursor": "#657b83",
+    "foreground": "#657b83",
+    "nvim": {
+      "colorscheme": "solarized",
+      "family": "solarized"
+    },
+    "source": "iTerm2-Color-Schemes@99d9701 ghostty/iTerm2 Solarized Light"
+  },
+  "tokyonight-day": {
+    "ansi": [
+      "#e9e9ed",
+      "#f52a65",
+      "#587539",
+      "#8c6c3e",
+      "#2e7de9",
+      "#9854f1",
+      "#007197",
+      "#6172b0",
+      "#a1a6c5",
+      "#f52a65",
+      "#587539",
+      "#8c6c3e",
+      "#2e7de9",
+      "#9854f1",
+      "#007197",
+      "#3760bf"
+    ],
+    "appearance": "light",
+    "background": "#e1e2e7",
+    "cursor": "#3760bf",
+    "foreground": "#3760bf",
+    "nvim": {
+      "colorscheme": "tokyonight-day",
+      "family": "tokyonight"
+    },
+    "source": "iTerm2-Color-Schemes@99d9701 ghostty/TokyoNight Day"
+  },
+  "tokyonight-moon": {
+    "ansi": [
+      "#1b1d2b",
+      "#ff757f",
+      "#c3e88d",
+      "#ffc777",
+      "#82aaff",
+      "#c099ff",
+      "#86e1fc",
+      "#828bb8",
+      "#444a73",
+      "#ff757f",
+      "#c3e88d",
+      "#ffc777",
+      "#82aaff",
+      "#c099ff",
+      "#86e1fc",
+      "#c8d3f5"
+    ],
+    "appearance": "dark",
+    "background": "#222436",
+    "cursor": "#c8d3f5",
+    "foreground": "#c8d3f5",
+    "nvim": {
+      "colorscheme": "tokyonight-moon",
+      "family": "tokyonight"
+    },
+    "source": "iTerm2-Color-Schemes@99d9701 ghostty/TokyoNight Moon"
+  },
+  "tokyonight-night": {
+    "ansi": [
+      "#15161e",
+      "#f7768e",
+      "#9ece6a",
+      "#e0af68",
+      "#7aa2f7",
+      "#bb9af7",
+      "#7dcfff",
+      "#a9b1d6",
+      "#414868",
+      "#f7768e",
+      "#9ece6a",
+      "#e0af68",
+      "#7aa2f7",
+      "#bb9af7",
+      "#7dcfff",
+      "#c0caf5"
+    ],
+    "appearance": "dark",
+    "background": "#1a1b26",
+    "cursor": "#c0caf5",
+    "foreground": "#c0caf5",
+    "nvim": {
+      "colorscheme": "tokyonight-night",
+      "family": "tokyonight"
+    },
+    "source": "iTerm2-Color-Schemes@99d9701 ghostty/TokyoNight Night"
+  },
+  "tokyonight-storm": {
+    "ansi": [
+      "#1d202f",
+      "#f7768e",
+      "#9ece6a",
+      "#e0af68",
+      "#7aa2f7",
+      "#bb9af7",
+      "#7dcfff",
+      "#a9b1d6",
+      "#4e5575",
+      "#f7768e",
+      "#9ece6a",
+      "#e0af68",
+      "#7aa2f7",
+      "#bb9af7",
+      "#7dcfff",
+      "#c0caf5"
+    ],
+    "appearance": "dark",
+    "background": "#24283b",
+    "cursor": "#c0caf5",
+    "foreground": "#c0caf5",
+    "nvim": {
+      "colorscheme": "tokyonight-storm",
+      "family": "tokyonight"
+    },
+    "source": "iTerm2-Color-Schemes@99d9701 ghostty/TokyoNight Storm"
+  }
+}

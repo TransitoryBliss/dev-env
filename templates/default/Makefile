@@ -117,8 +117,10 @@ ifneq ($(DEV_ENV),)
 	rsync -av --delete $(RSYNC_EXCLUDES) $(DEV_ENV)/ $(NIXUSER)@$(NIXADDR):~/$(BASE_DIR)/
 endif
 
-# SSH in and attach to herdr (or start it), forwarding devEnv.proxy to the Mac:
-# every browser UI in the machine is at http://<name>.localhost:$(PROXY_PORT) (psm,
+# SSH in and attach to herdr (or start it), forwarding devEnv.proxy to the Mac.
+# herdr-attach (the base's theme.nix) first writes devEnv.theme's palette to the
+# Mac's terminal, and resets it on detach; without a theme it's plain herdr.
+# Every browser UI in the machine is at http://<name>.localhost:$(PROXY_PORT) (psm,
 # plannotator, md). `make vm/ssh SSH_CMD=` gives a plain shell instead.
 # LogLevel=ERROR keeps refused forwards (a stale tab retrying) from flooding
 # the terminal. -t because ssh allocates no terminal when given a command.
@@ -126,7 +128,7 @@ endif
 # so pi's MCP OAuth callbacks reach the machine from the Mac's browser. A second
 # VM running at the same time needs its own values for both: set them in the
 # host file and, to match, in Makefile.local.
-SSH_CMD ?= herdr
+SSH_CMD ?= herdr-attach
 PROXY_PORT ?= 8090
 MCP_OAUTH_PORT ?= 19876
 vm/ssh:

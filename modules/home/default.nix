@@ -18,7 +18,7 @@ in
     ./mcp.nix
     (import ./secrets.nix { inherit inputs; })
     ./session-manager.nix
-    ./terminal.nix
+    ./theme.nix
     inputs.nix-index-database.homeModules.default
   ];
 

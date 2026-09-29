@@ -63,3 +63,10 @@ key = "prefix+ctrl+r"
 type = "plugin_action"
 command = "ohmyzsh.shell.reload-all"
 description = "reload Oh My Zsh in idle panes"
+
+# "terminal" makes herdr follow the terminal's palette, which herdr-attach sets
+# from devEnv.theme: the sidebar and panes show the terminal's background, the
+# rest uses ANSI colours. herdr's other themes only colour text, highlights and
+# the tab bar, so they'd clash with the theme instead of following it.
+[theme]
+name = "terminal"

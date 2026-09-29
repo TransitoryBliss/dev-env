@@ -22,10 +22,12 @@
         # };
       };
 
-      # Colours an interactive zsh writes to its terminal, so the palette is
-      # part of this config instead of the terminal emulator's own settings.
-      # "gruvbox-dark", "catppuccin-mocha", or left out to change nothing.
-      # home.devEnv.terminalPalette = "gruvbox-dark";
+      # One colour theme for the terminal, herdr, nvim and pi, instead of each
+      # tool's own settings. The base's themes/palettes.json lists the names
+      # (catppuccin-mocha, tokyonight-storm, gruvbox-light, rose-pine-dawn, ...).
+      # A host file can override it, and `background` recolours just that host.
+      # home.devEnv.theme.name = "gruvbox-dark";
+      # home.devEnv.theme.background = "#211535";
 
       # Pi Session Manager: browse, search and resume agent sessions in a
       # browser, at http://psm.localhost:8090 (needs proxy.enable below).

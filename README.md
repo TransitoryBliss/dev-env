@@ -77,7 +77,8 @@ Home level, under `devEnv.user.home`:
 | `devEnv.git.default`                 | `{ account, name, email }` used everywhere by default |
 | `devEnv.git.overrides."<host/owner>"` | The same, for repos under one org or user            |
 | `devEnv.git.worktreeRoot`            | Where `wt` puts worktrees (default `~/.herdr/worktrees`), laid out like `~/source` |
-| `devEnv.terminalPalette`             | `"gruvbox-dark"`, `"catppuccin-mocha"` or null (default null) |
+| `devEnv.theme.name`                  | One colour theme for terminal, herdr, nvim and pi (`themes/palettes.json`: catppuccin, tokyonight, gruvbox, dracula, rose-pine, kanagawa, nord, everforest, onedark, nightfox, solarized, github, monokai-pro, ayu); null (default) leaves colours alone |
+| `devEnv.theme.background`            | Replaces the theme's background, e.g. to tell two machines apart |
 | `devEnv.sessionManager.enable`       | Pi Session Manager: server, web UI and pi extension  |
 | `devEnv.secrets.sopsFile` / `.env`   | Environment variables from a sops-encrypted file (see the template README) |
 | `devEnv.secrets.scopes."<host/owner>".env` | The same, replacing the global ones in repos under one org or user |
@@ -155,15 +156,26 @@ For `gh`, run `gh auth login --git-protocol ssh --skip-ssh-key` once per account
   package that has it. Both use the prebuilt index from
   [nix-index-database](https://github.com/nix-community/nix-index-database), so nothing is
   indexed locally.
-- **Terminal colours** come from `devEnv.terminalPalette` (`gruvbox-dark`,
-  `catppuccin-mocha`, or null to leave the terminal alone; default null). Programs emit ANSI
-  colour *indices*, and the terminal decides what they look like — a palette that normally
-  lives outside the machine, in Windows Terminal's `settings.json` or macOS Terminal's
-  profile. An interactive zsh instead writes it with OSC escape sequences at startup, so the
-  palette is part of this config. Everything downstream follows: the prompt, `ls`, fzf,
-  zsh-syntax-highlighting. The palette belongs to the terminal rather than the shell, so it
-  outlives the shell that set it: leaving the machine in the same tab keeps these colours
-  until the tab closes. `printf '\e]104\e\\'` puts them back.
+- **Colours** come from one setting, `devEnv.theme.name` (32 themes, dark and light, in
+  `themes/palettes.json`; null leaves every tool alone). Most programs emit ANSI colour
+  *indices* and let the terminal pick the RGB, so the theme's job is to set the terminal's
+  palette with OSC escape sequences, and the rest follows:
+  - **The terminal** (Ghostty over SSH): `herdr-attach`, the Makefile's `SSH_CMD`, writes the
+    palette before attaching and resets it on detach. On WSL the first interactive zsh does.
+    Shells inside herdr panes write nothing: herdr emulates each pane, so a colour set there
+    would pin that pane instead of reaching the terminal.
+  - **herdr**: `[theme] name = "terminal"` in `herdr/config.toml`. Its sidebar and panes then
+    show the terminal's background. herdr's other themes never paint the pane background.
+  - **The prompt, `ls`, fzf, git**: ANSI indices, so they follow.
+  - **nvim**: the dev-env-theme plugin (`themes/nvim`, linked to
+    `~/.local/share/dev-env/theme.nvim`) reads `~/.config/dev-env/theme.json` and applies the
+    matching colorscheme, transparent so the terminal's background shows through. The private
+    nvim config loads it from `lua/plugins/colors.lua` (see the template).
+  - **pi**: a `dev-env` theme in `~/.pi/agent/themes`; pick it once in `/settings`.
+
+  Changing theme: edit the one line, `make switch`, detach and reattach herdr, restart nvim.
+  `devEnv.theme.background` recolours just one machine. `themes/update.sh` regenerates the
+  palettes; `themes/nvim/check.sh` loads each one in headless nvim.
 - **Markdown preview:** `md [file|dir]` runs [go-grip](https://github.com/chrishrb/go-grip)
   on `127.0.0.1:6419` (GitHub styling, mermaid, live reload) and prints the URL. Through
   `devEnv.proxy` it's at `http://md.localhost:8090`. On WSL it opens in the Windows browser by itself, through a small

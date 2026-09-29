@@ -1,0 +1,16 @@
+{
+  "ayu": { "repo": "Shatur/neovim-ayu" },
+  "catppuccin": { "repo": "catppuccin/nvim", "name": "catppuccin" },
+  "dracula": { "repo": "Mofiqul/dracula.nvim" },
+  "everforest": { "repo": "neanias/everforest-nvim" },
+  "github": { "repo": "projekt0n/github-nvim-theme", "name": "github-theme" },
+  "gruvbox": { "repo": "ellisonleao/gruvbox.nvim" },
+  "kanagawa": { "repo": "rebelot/kanagawa.nvim" },
+  "monokai-pro": { "repo": "loctvl842/monokai-pro.nvim" },
+  "nightfox": { "repo": "EdenEast/nightfox.nvim" },
+  "nord": { "repo": "gbprod/nord.nvim" },
+  "onedark": { "repo": "navarasu/onedark.nvim" },
+  "rose-pine": { "repo": "rose-pine/neovim", "name": "rose-pine" },
+  "solarized": { "repo": "maxmx03/solarized.nvim" },
+  "tokyonight": { "repo": "folke/tokyonight.nvim" }
+}
