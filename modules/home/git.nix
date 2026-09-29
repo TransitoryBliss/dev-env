@@ -96,6 +96,41 @@ let
       cat ${keyFor id}.pub
     '') accounts;
   };
+
+  wtEnv = ''
+    typeset -g _WT_SRC=${lib.escapeShellArg "${home}/source"} _WT_ROOT=${lib.escapeShellArg cfg.worktreeRoot}
+  '';
+
+  # `wt gc --auto` outside an interactive shell: the systemd timer and the herdr
+  # hook. Fetches must fail rather than prompt (no terminal, maybe no ssh-agent);
+  # a failed fetch only makes wt keep more. herdr comes from the user's profile.
+  wtGc = pkgs.writeScript "wt-gc" ''
+    #!${pkgs.zsh}/bin/zsh -f
+    export PATH=${lib.makeBinPath (with pkgs; [ git jq gh openssh coreutils util-linux gawk diffutils ])}:${config.home.profileDirectory}/bin:$PATH
+    export GIT_TERMINAL_PROMPT=0 GIT_SSH_COMMAND='ssh -o BatchMode=yes'
+    # The hook runs with the closed (or some other) workspace's ids; they mean nothing here.
+    unset HERDR_WORKSPACE_ID HERDR_TAB_ID HERDR_PANE_ID
+    ${wtEnv}
+    source ${./wt.zsh}
+    _wt_gc "$@"
+  '';
+
+  # herdr records a linked plugin by its resolved path and re-reads the manifest on
+  # every event, so the manifest is copied to a fixed place (not linked into the
+  # store, whose path changes on each rebuild) and its command may change freely.
+  wtPluginManifest = pkgs.writeText "herdr-plugin.toml" ''
+    id = "dev-env.wt"
+    name = "wt"
+    version = "0.1.0"
+    min_herdr_version = "0.7.0"
+    description = "Remove merged git worktrees when a workspace closes (wt gc --auto)"
+    platforms = ["linux", "macos"]
+
+    [[events]]
+    on = "workspace.closed"
+    command = ["${wtGc}", "--auto"]
+  '';
+  wtPluginDir = "${config.xdg.dataHome}/wt/herdr-plugin";
 in
 {
   options.devEnv.git = {
@@ -157,8 +192,36 @@ in
         local dir
         dir=$(ghq list | fzf --query="$*" --select-1) && cd "$(ghq root)/$dir"
       }
-      typeset -g _WT_SRC=${lib.escapeShellArg "${home}/source"} _WT_ROOT=${lib.escapeShellArg cfg.worktreeRoot}
+      ${wtEnv}
       source ${./wt.zsh}
+    '';
+
+    # Worktree cleanup without asking: hourly, and whenever a herdr workspace closes.
+    # `wt gc --auto` only removes what loses nothing (see wt.zsh).
+    systemd.user.services.wt-gc = {
+      Unit.Description = "Remove merged git worktrees (wt gc --auto)";
+      Service = {
+        Type = "oneshot";
+        ExecStart = "${wtGc} --auto";
+      };
+    };
+    systemd.user.timers.wt-gc = {
+      Unit.Description = "Remove merged git worktrees hourly";
+      Timer = {
+        OnCalendar = "hourly";
+        Persistent = true;
+        RandomizedDelaySec = "5m";
+      };
+      Install.WantedBy = [ "timers.target" ];
+    };
+
+    home.activation.wtHerdrPlugin = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
+      run mkdir -p ${lib.escapeShellArg wtPluginDir}
+      run install -m 644 ${wtPluginManifest} ${lib.escapeShellArg "${wtPluginDir}/herdr-plugin.toml"}
+      herdr=${config.home.path}/bin/herdr
+      if [ -x "$herdr" ] && ! run "$herdr" plugin link ${lib.escapeShellArg wtPluginDir} >/dev/null 2>&1; then
+        warnEcho "wt: couldn't link the herdr plugin; run: herdr plugin link ${wtPluginDir}"
+      fi
     '';
   };
 }

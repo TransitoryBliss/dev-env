@@ -102,6 +102,13 @@ its branch, but only if nothing would be lost: no uncommitted changes, and the b
 no commits the default branch lacks. `wt ls` shows every worktree and its state; `wt gc` removes
 the merged ones and closed ones with no new commits (`-n` to only list them).
 
+Cleanup also happens by itself: `wt gc --auto` runs hourly (systemd user timer `wt-gc`) and
+whenever a herdr workspace closes (a local herdr plugin, `dev-env.wt`, linked on every
+rebuild). Once a task's PR is squash-merged, closing its workspace removes the worktree and
+branch; if you leave it open, the next hourly run closes and removes it, unless it's the
+workspace on screen. A herdr notification lists what went. If herdr isn't answering, nothing
+is removed, since there's then no telling which worktrees are open.
+
 Every account gets its own SSH key, `~/.ssh/id_ed25519_<account>`. Git uses the default
 identity everywhere, except in repos whose remote, or path under `~/source`, matches an override.
 Keys are chosen by URL, so this works with any tool (`git clone`, `ghq get`, `go get`):

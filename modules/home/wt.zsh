@@ -8,6 +8,9 @@
 # nothing would be lost (clean, and merged, squash-merged through a PR, or with no
 # commits the default branch lacks), unless forced.
 #
+# `wt gc --auto` also runs by itself (modules/home/git.nix): hourly from a systemd
+# user timer, and from a herdr plugin hook whenever a workspace closes.
+#
 # Sourced from ~/.zshrc by modules/home/git.nix. Needs git, jq, herdr; gh for
 # squash-merge detection.
 
@@ -35,7 +38,8 @@ wt done [-f]               in a worktree: remove it and its branch, if nothing i
                            -f: remove it anyway, uncommitted and unmerged work too.
 wt ls                      every worktree under ${_WT_ROOT/#$HOME/~}, with its state
 wt gc [-n]                 remove merged ones, and closed ones with no new commits.
-                           -n: only say what would go.
+                           -n: only say what would go. Also runs by itself, hourly
+                           and whenever a herdr workspace closes.
 
 States: dirty (uncommitted changes), merged (a merged PR has this exact commit),
 in-base (no commits the default branch lacks: new, or merged normally), unmerged,
@@ -224,26 +228,68 @@ _wt_ls() {
   (( n )) || print "wt: no worktrees under ${_WT_ROOT/#$HOME/~}"
 }
 
+# Reports a kept worktree, except in --auto runs (which only report removals).
+# Reads $auto from _wt_gc through zsh's dynamic scoping.
+_wt_keep() { [[ -n $auto ]] || print -r -- "keep    $1" }
+
+# wt gc [-n] [--auto]. --auto is for unattended runs (timer, herdr hook): it skips
+# instead of waiting when another gc runs, spares the workspace you're looking at,
+# only prints removals, and shows a herdr notification for them.
 _wt_gc() {
-  local dry d main branch state wsid age name why
-  [[ $1 == -n ]] && dry=1
-  _wt_scan | while IFS=$_WT_SEP read -r d main branch state wsid age; do
-    name=${d#$_WT_ROOT/}
-    case $state in
-      merged) why='PR merged' ;;
-      in-base)
-        # An open one with no commits is usually a task that has just started.
-        [[ -z $wsid ]] || { print -r -- "keep    $name: no commits yet, but open"; continue }
-        why='no commits beyond the default branch' ;;
-      *) print -r -- "keep    $name: $state"; continue ;;
+  local dry auto wait=120 lock lockfd focused d main branch state wsid age name why s=s
+  local -a removed
+  while (( $# )); do
+    case $1 in
+      -n) dry=1 ;;
+      --auto) auto=1; wait=0 ;;
+      *) print -u2 "wt gc: unknown option $1"; return 2 ;;
     esac
-    if [[ -n $wsid && $wsid == $HERDR_WORKSPACE_ID ]]; then
-      print -r -- "keep    $name: you're in it, use wt done"; continue
-    fi
-    if [[ -n $dry ]]; then
-      print -r -- "remove  $name ($why)"
-    else
-      _wt_remove "$d" "$main" "$branch" "$wsid" "" </dev/null && print -r -- "removed $name ($why)"
-    fi
+    shift
   done
+  # Open workspaces are what protect a started task. If herdr doesn't answer, every
+  # worktree would look closed, so remove nothing.
+  if ! (( $+commands[herdr] )) || ! focused=$(herdr workspace list 2>/dev/null |
+    jq -er '[.result.workspaces[] | select(.focused) | .workspace_id] | join(" ")'); then
+    print -u2 "wt: herdr isn't answering, so there's no telling which worktrees are open; removing nothing"
+    [[ -n $auto ]] && return 0 || return 1
+  fi
+  # One gc at a time: the hook fires again for every workspace a gc closes.
+  zmodload zsh/system || return 1
+  lock=${XDG_STATE_HOME:-$HOME/.local/state}/wt-gc.lock
+  mkdir -p "${lock:h}" && : >>"$lock" # zsystem flock doesn't create the file
+  if ! zsystem flock -t $wait -f lockfd "$lock" 2>/dev/null; then
+    [[ -n $auto ]] && return 0
+    print -u2 "wt: another wt gc is still running"; return 1
+  fi
+  {
+    _wt_scan | while IFS=$_WT_SEP read -r d main branch state wsid age; do
+      name=${d#$_WT_ROOT/}
+      case $state in
+        merged) why='PR merged' ;;
+        in-base)
+          # An open one with no commits is usually a task that has just started.
+          [[ -z $wsid ]] || { _wt_keep "$name: no commits yet, but open"; continue }
+          why='no commits beyond the default branch' ;;
+        *) _wt_keep "$name: $state"; continue ;;
+      esac
+      if [[ -n $wsid && $wsid == $HERDR_WORKSPACE_ID ]]; then
+        _wt_keep "$name: you're in it, use wt done"; continue
+      fi
+      if [[ -n $auto && -n $wsid && " $focused " == *" $wsid "* ]]; then
+        continue # on screen right now; the next run gets it
+      fi
+      if [[ -n $dry ]]; then
+        print -r -- "remove  $name ($why)"
+      elif _wt_remove "$d" "$main" "$branch" "$wsid" "" </dev/null; then
+        removed+=($name)
+        print -r -- "removed $name ($why)"
+      fi
+    done
+    if [[ -n $auto ]] && (( $#removed )); then
+      (( $#removed == 1 )) && s=
+      herdr notification show "wt: removed $#removed worktree$s" --body "${(j:, :)removed}" >/dev/null 2>&1
+    fi
+  } always {
+    zsystem flock -u $lockfd
+  }
 }

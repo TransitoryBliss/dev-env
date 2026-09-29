@@ -252,6 +252,18 @@ commit its `flake.lock`.
   `devEnv.scopeRoots` (`mcp.nix` and `secrets.nix` do); git identities don't need it, since
   a worktree's gitdir is inside its main checkout. `_WT_ROOT`/`_WT_SRC` come from `git.nix`,
   so the detached `zsh -f` in `wt done` gets them passed explicitly.
+  **Automatic gc** (`git.nix`): `wt-gc` (a `zsh -f` script sourcing `wt.zsh`) runs
+  `_wt_gc --auto` from the `wt-gc` systemd user timer (hourly) and from a herdr plugin hook on
+  `workspace.closed`. herdr records a linked plugin by its *resolved* path and re-reads the
+  manifest on every event, so the manifest is copied (`install`, not `home.file`) to
+  `~/.local/share/wt/herdr-plugin/` by an activation script that then runs `herdr plugin link`
+  (idempotent, needs no running server); a store symlink would pin a path the next rebuild
+  replaces. `--auto` refuses to remove anything if `herdr workspace list` fails (every worktree
+  would look closed), skips the focused workspace, and takes a non-blocking lock
+  (`~/.local/state/wt-gc.lock`) because each workspace a gc closes fires the hook again.
+  `zsystem flock` doesn't create the lock file, so it's touched first. Fetches run with
+  `GIT_TERMINAL_PROMPT=0` and ssh `BatchMode`: no terminal, maybe no agent; a failed fetch only
+  makes it keep more. Hook output is in `herdr plugin log list --plugin dev-env.wt`.
 - **UTM means Apple Virtualization, not QEMU.** The disk is virtio (`/dev/vda`, the Makefile's
   `NIXBLOCK` default; Parallels passes `/dev/sda`). `devEnv.utm.rosetta` stays off by default:
   nixpkgs' `virtualisation.rosetta` mounts UTM's `rosetta` virtiofs share without `nofail`, so
