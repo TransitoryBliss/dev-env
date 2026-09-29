@@ -146,6 +146,26 @@ After that, `make switch` inside WSL rebuilds; it picks the host from the hostna
    that file**, it is what pins the plugins on every other machine. After pulling someone
    else's `lazy-lock.json`, run `nvim --headless "+Lazy! restore" +qa` to match it.
 
+## Colours
+
+One setting in `users/me.nix` colours the terminal, herdr, nvim and pi:
+
+```nix
+home.devEnv.theme.name = "tokyonight-storm";   # names in the base's themes/palettes.json
+home.devEnv.theme.background = "#211535";      # optional, e.g. per host to tell VMs apart
+```
+
+A host file can override it (e.g. a light theme on one VM, with `lib.mkForce` or by
+setting it only per host). After changing it: `make switch`, detach and reattach herdr
+(`make vm/ssh`), restart nvim. Commit `herdr/config.toml` afterwards: `make switch` keeps a
+marked colour block at its end. What the private config needs, all already in this
+template:
+
+- `SSH_CMD ?= herdr-attach` in the `Makefile` (writes the palette to your terminal).
+- `[theme] name = "terminal"` in `herdr/config.toml`.
+- `nvim/lua/plugins/colors.lua` loading the base's plugin, lualine on `theme = "auto"`, and
+  no `vim.cmd.colorscheme(...)` anywhere else in the nvim config.
+
 ## Secrets
 
 API keys for agent tools (e.g. `LINEAR_API_KEY` for Linear's MCP server) live in `secrets.yaml`,

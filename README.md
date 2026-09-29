@@ -178,6 +178,10 @@ For `gh`, run `gh auth login --git-protocol ssh --skip-ssh-key` once per account
     by `make switch` (only the `theme` key; `devEnv.theme.pi = false` to leave it alone).
 
   Changing theme: edit the one line, `make switch`, detach and reattach herdr, restart nvim.
+  **Coming from `devEnv.terminalPalette`:** it still works as an alias, but two definitions
+  (the old name in a user file, `theme.name` in a host file) conflict, so rename it. Then
+  take the template's `SSH_CMD`, herdr `[theme]`, `nvim/lua/plugins/colors.lua` and
+  lualine setting, and delete any `vim.cmd.colorscheme(...)` from `init.lua`.
   `devEnv.theme.background` recolours just one machine. `themes/update.sh` regenerates the
   palettes; `themes/nvim/check.sh` loads each one in headless nvim.
 - **Markdown preview:** `md [file|dir]` runs [go-grip](https://github.com/chrishrb/go-grip)
