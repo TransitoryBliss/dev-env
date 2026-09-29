@@ -166,12 +166,16 @@ For `gh`, run `gh auth login --git-protocol ssh --skip-ssh-key` once per account
     would pin that pane instead of reaching the terminal.
   - **herdr**: `[theme] name = "terminal"` in `herdr/config.toml`. Its sidebar and panes then
     show the terminal's background. herdr's other themes never paint the pane background.
+    `make switch` also keeps a marked `[theme.custom]` block at the end of that file with the
+    theme's own colours for the active tab, selected rows and tab bar (commit it). Turn it off
+    with `devEnv.theme.herdr = false`.
   - **The prompt, `ls`, fzf, git**: ANSI indices, so they follow.
   - **nvim**: the dev-env-theme plugin (`themes/nvim`, linked to
     `~/.local/share/dev-env/theme.nvim`) reads `~/.config/dev-env/theme.json` and applies the
     matching colorscheme, transparent so the terminal's background shows through. The private
     nvim config loads it from `lua/plugins/colors.lua` (see the template).
-  - **pi**: a `dev-env` theme in `~/.pi/agent/themes`; pick it once in `/settings`.
+  - **pi**: a `dev-env` theme in `~/.pi/agent/themes`, selected in `~/.pi/agent/settings.json`
+    by `make switch` (only the `theme` key; `devEnv.theme.pi = false` to leave it alone).
 
   Changing theme: edit the one line, `make switch`, detach and reattach herdr, restart nvim.
   `devEnv.theme.background` recolours just one machine. `themes/update.sh` regenerates the

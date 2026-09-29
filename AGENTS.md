@@ -136,6 +136,14 @@ commit its `flake.lock`.
   set a colorscheme itself afterwards (a stray `vim.cmd.colorscheme` in `init.lua` did).
   nvim's own background differs slightly from the palette for everforest, onedark and
   monokai-pro; nvim is transparent, so only floats show it.
+- **herdr's `terminal` theme uses fixed ANSI slots** for its highlights (active tab = blue
+  bg with "bright black" text, selected row = "bright black"), which is a subtle surface on
+  dark palettes and a heavy mid-grey on light ones. herdr has no includes and its settings UI
+  writes `config.toml`, so `theme.nix`'s `devEnvThemeHerdr` activation rewrites only a
+  `# BEGIN/END devEnv.theme` `[theme.custom]` block in the checkout, from palette mixes. It
+  skips (with a warning) if the file has its own unmarked `[theme.custom]`: TOML forbids two.
+  Idempotent: it writes only when the result differs. `devEnvThemePi` sets only `.theme` in
+  pi's `settings.json` with jq.
 - **herdr keybindings:** `prefix+shift+r` is herdr's own `keys.reload_config`, so the
   herdr-ohmyzsh reload action is bound to `prefix+ctrl+r` instead of the `prefix+shift+r` its
   README suggests. Check new bindings against the upstream config reference before using them.

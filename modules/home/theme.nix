@@ -172,6 +172,41 @@ let
       herdr "$@"
     ''
   );
+
+  # herdr's "terminal" theme builds its highlights from fixed ANSI slots (active
+  # tab = blue with "bright black" text, selected row = "bright black"). On a
+  # dark palette that slot is a subtle surface, on a light one a heavy mid-grey,
+  # so the same rule looks different per theme. These come from the palette's
+  # own colours instead, with one rule for every theme.
+  herdrColours = {
+    accent = ansi 4;
+    panel_bg = mix bg fg 5; # tab bar, popups; also the active tab's text
+    surface0 = mix bg fg 8; # inactive tabs
+    surface_dim = mix bg fg 10;
+    active_row_bg = mix bg fg 12; # focused sidebar rows
+    surface1 = mix bg fg 16;
+    selection_bg = mix bg fg 18; # navigate-mode cursor
+    text = fg;
+    subtext0 = mix fg bg 20;
+    overlay1 = mix fg bg 30;
+    overlay0 = mix fg bg 45;
+    red = ansi 1;
+    green = ansi 2;
+    yellow = ansi 3;
+    blue = ansi 4;
+    mauve = ansi 5;
+    teal = ansi 6;
+    peach = mix (ansi 1) (ansi 3) 50;
+  };
+  herdrBlock = pkgs.writeText "herdr-theme-block" (''
+    # BEGIN devEnv.theme (${toString cfg.name}): rewritten by `make switch`, don't edit.
+    # herdr's "terminal" theme takes its highlights from fixed ANSI slots, which
+    # don't work on light palettes; these come from the theme's own colours.
+    [theme.custom]
+  '' + lib.concatStrings (lib.mapAttrsToList (k: v: "${k} = \"${v}\"\n") herdrColours)
+  + ''
+    # END devEnv.theme
+  '');
 in
 {
   imports = [
@@ -195,6 +230,23 @@ in
       description = ''
         Replaces the theme's background colour, e.g. to tell two machines
         apart. nvim is transparent, so it follows.
+      '';
+    };
+    herdr = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = ''
+        Keep a marked [theme.custom] block in <configDir>/herdr/config.toml
+        with the theme's colours (active tab, selected rows, tab bar), rewritten
+        on every `make switch`. Commit the file afterwards.
+      '';
+    };
+    pi = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = ''
+        Set "theme": "dev-env" in ~/.pi/agent/settings.json on every
+        `make switch`, leaving the other settings alone.
       '';
     };
   };
@@ -231,6 +283,57 @@ in
       };
 
       home.file.".pi/agent/themes/dev-env.json".text = builtins.toJSON piTheme;
+    })
+
+    (lib.mkIf (cfg.name != null && cfg.herdr) {
+      # herdr has no includes, and its settings UI writes config.toml, so the
+      # file stays a checkout file and only the marked block is rewritten.
+      home.activation.devEnvThemeHerdr = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+        herdrConfig=${lib.escapeShellArg "${config.devEnv.configDir}/herdr/config.toml"}
+        if [ -f "$herdrConfig" ]; then
+          current=$(${pkgs.gawk}/bin/awk '
+            /^# BEGIN devEnv.theme/ { skip = 1; next }
+            /^# END devEnv.theme/   { skip = 0; next }
+            !skip' "$herdrConfig")
+          if printf '%s\n' "$current" | ${pkgs.gnugrep}/bin/grep -q '^\[theme\.custom'; then
+            warnEcho "devEnv.theme: $herdrConfig has its own [theme.custom]; remove it to get the theme's herdr colours."
+          else
+            tmp=$(mktemp)
+            printf '%s\n\n%s' "$current" "$(cat ${herdrBlock})" > "$tmp"
+            printf '\n' >> "$tmp"
+            if ! ${pkgs.diffutils}/bin/cmp -s "$tmp" "$herdrConfig"; then
+              run cp "$tmp" "$herdrConfig"
+              if [ -x ${config.home.profileDirectory}/bin/herdr ]; then
+                run ${config.home.profileDirectory}/bin/herdr server reload-config >/dev/null 2>&1 || true
+              fi
+            fi
+            rm -f "$tmp"
+          fi
+        fi
+      '';
+    })
+
+    (lib.mkIf (cfg.name != null && cfg.pi) {
+      home.activation.devEnvThemePi = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+        piSettings="$HOME/.pi/agent/settings.json"
+        tmp=$(mktemp)
+        if [ -L "$piSettings" ]; then
+          : # managed elsewhere
+        elif [ -f "$piSettings" ]; then
+          if [ "$(${pkgs.jq}/bin/jq -r '.theme // empty' "$piSettings" 2>/dev/null)" != dev-env ]; then
+            if ${pkgs.jq}/bin/jq '.theme = "dev-env"' "$piSettings" > "$tmp" 2>/dev/null; then
+              run cp "$tmp" "$piSettings"
+            else
+              warnEcho "devEnv.theme: $piSettings isn't valid JSON; pick the dev-env theme in pi's /settings."
+            fi
+          fi
+        else
+          printf '{\n  "theme": "dev-env"\n}\n' > "$tmp"
+          run mkdir -p "$HOME/.pi/agent"
+          run cp "$tmp" "$piSettings"
+        fi
+        rm -f "$tmp"
+      '';
     })
   ];
 }
