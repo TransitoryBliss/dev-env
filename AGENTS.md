@@ -30,8 +30,8 @@ it (see below).
 |---|---|
 | `flake.nix` | Inputs, exports, example hosts. Modules are imported as `import ./modules/x { inherit inputs; }` (they're functions of the flake inputs), so consumers don't need to pass inputs. |
 | `modules/nixos/default.nix` | `devEnv.*` system options: user, platform, configDir, timeZone, unfreePackages. Wires home-manager for `devEnv.user.name`. |
-| `modules/nixos/{parallels,utm,wsl}.nix` | One per `devEnv.platform`. Always imported; everything under `config = lib.mkIf (platform == …)`. |
-| `modules/nixos/vm.nix` | What the Mac VM platforms share (boot, disks by label, NetworkManager, firewall, SSH), for `platform` `utm` or `parallels`. |
+| `modules/nixos/{parallels,utm,vmware,wsl}.nix` | One per `devEnv.platform`. Always imported; everything under `config = lib.mkIf (platform == …)`. |
+| `modules/nixos/vm.nix` | What the Mac VM platforms share (boot, disks by label, NetworkManager, firewall, SSH), for `platform` `utm`, `parallels` or `vmware`. |
 | `modules/home/*.nix` | Home-manager: `languages` (flags), `editor`, `git` (identities, ghq, `wt`), `agents` (pi, Claude Code, rtk, herdr, plannotator). |
 | `modules/home/wt.zsh` | `wt`: worktree + herdr workspace + agent per task. Sourced from `git.nix`'s `initContent`. |
 | `pkgs/plannotator.nix` | Prebuilt binary per architecture. |
@@ -236,7 +236,12 @@ commit its `flake.lock`.
   enabling it without UTM's "Enable Rosetta" hangs the boot. `vm.nix` is imported where
   `parallels.nix` used to be, so list options (`extraGroups`) merge in the same order: splitting
   it left a Parallels host's `toplevel.drvPath` byte-identical. Check that again after touching
-  it. `nix flake check` builds `example-vm` (UTM) and `example-parallels`.
+  it. `nix flake check` builds `example-vm` (UTM), `example-parallels` and `example-vmware`.
+- **VMware Fusion** (Apple Silicon): NVMe disk (`NIXBLOCK=/dev/nvme0n1`), open-vm-tools via
+  `virtualisation.vmware.guest`. That module adds `mptspi` to the initrd; it exists on
+  aarch64 kernels too (the initrd builds). `systemd-boot.consoleMode = "0"` avoids Fusion's
+  EFI console-mode error. Added because UTM's Shared network (Apple's per-VM Internet
+  Sharing) had no internet on an MDM-managed Mac with the firewall locked on.
 - **Makefile:** `vm/ssh` forwards `PROXY_PORT` (`devEnv.proxy.port`) and `MCP_OAUTH_PORT`
   (`devEnv.mcp.callbackPort`); a second VM running at the same time sets both in its host file
   and `Makefile.local` (read before the `?=` defaults). `HOST` defaults to the hostname on NixOS, and is only overridable from the

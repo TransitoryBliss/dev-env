@@ -1,7 +1,7 @@
 # dev-env
 
 A NixOS development environment for AI-assisted coding, packaged as reusable modules.
-It runs as a UTM or Parallels VM on a Mac, or under WSL2 on Windows, and gives you:
+It runs as a UTM, Parallels or VMware Fusion VM on a Mac, or under WSL2 on Windows, and gives you:
 
 - **Agents:** [pi](https://github.com/earendil-works/pi) and [Claude Code](https://claude.com/claude-code),
   with [rtk](https://github.com/rtk-ai/rtk) cutting the tokens command output costs, and
@@ -45,7 +45,7 @@ The template's README covers installing on each platform. For a filled-in privat
 | Path                 | What                                                       |
 | -------------------- | ---------------------------------------------------------- |
 | `flake.nix`          | Exports `nixosModules`, `homeModules`, `lib.mkHost`, the template |
-| `modules/nixos/`     | User account, Nix settings, platforms (`vm.nix` shared by `utm.nix` and `parallels.nix`, `wsl.nix`) |
+| `modules/nixos/`     | User account, Nix settings, platforms (`vm.nix` shared by `utm.nix`, `parallels.nix` and `vmware.nix`, `wsl.nix`) |
 | `modules/home/`      | Languages, editor, git identities, agents                  |
 | `pkgs/`              | Packages not in nixpkgs (plannotator, pi-session-manager)  |
 | `templates/default/` | Starting point for a private config                        |
@@ -56,7 +56,7 @@ System level, usually in `users/<you>.nix` and `hosts/<machine>.nix`:
 
 | Option                   | Meaning                                                            |
 | ------------------------ | ------------------------------------------------------------------ |
-| `devEnv.platform`        | `"utm"`, `"parallels"` or `"wsl"`                                  |
+| `devEnv.platform`        | `"utm"`, `"parallels"`, `"vmware"` or `"wsl"`                      |
 | `devEnv.utm.rosetta`     | Run x86_64 binaries through Rosetta on UTM (tick "Enable Rosetta" in UTM first) |
 | `devEnv.user.name`       | Your login name                                                    |
 | `devEnv.user.sshKeys`    | Public keys allowed to SSH in (VM platforms)                       |

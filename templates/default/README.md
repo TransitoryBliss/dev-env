@@ -69,6 +69,29 @@ Use `hosts/parallels.nix` and uncomment the `parallels` entry in `flake.nix`.
 After changes: `make vm/bootstrap NIXADDR=<ip> HOST=parallels`. Updates:
 `make vm/update NIXADDR=<ip> HOST=parallels`.
 
+## VMware Fusion VM on a Mac
+
+Use `hosts/vmware.nix` and uncomment the `vmware` entry in `flake.nix`. Fusion is free, but
+the download needs a Broadcom account. Its NAT network runs through VMware's own helper, so it
+can work where UTM's Shared network doesn't (e.g. behind a firewall enforced by device management).
+
+1. Download the NixOS **minimal ISO** for aarch64 from <https://nixos.org/download>.
+2. In Fusion, create a VM from the ISO (**Other Linux 6.x kernel 64-bit Arm**; 4+ CPUs, 8+ GB
+   RAM, 64+ GB disk). Leave the network on **Share with my Mac** (NAT).
+3. In the VM console, run `sudo passwd root` (a temporary password for the installer), then
+   `ip addr` to get the IP and `lsblk` to see the disk (`nvme0n1`).
+4. From the Mac, in this repo (**this wipes the VM disk**):
+   ```sh
+   make vm/bootstrap0 NIXADDR=<ip> HOST=vmware NIXBLOCK=/dev/nvme0n1
+   ```
+5. After the reboot, remove the ISO (VM settings → CD/DVD → uncheck Connect). The installed
+   system has no password, so get the IP from Fusion rather than the console: open-vm-tools
+   reports it, and `vmrun getGuestIPAddress <path-to.vmx>` prints it.
+6. `make vm/bootstrap NIXADDR=<ip> HOST=vmware`, then connect with `make vm/ssh NIXADDR=<ip>`.
+
+After changes: `make vm/bootstrap NIXADDR=<ip> HOST=vmware`. Updates:
+`make vm/update NIXADDR=<ip> HOST=vmware`.
+
 ## WSL2 on Windows
 
 The first install renames NixOS-WSL's default user (`nixos`) to yours. NixOS-WSL requires

@@ -4,7 +4,7 @@
 #   NIXADDR   IP of the VM (shown by `ip addr` in the VM console)
 #   NIXUSER   devEnv.user.name
 #   NIXBLOCK  install disk inside the VM (check with `lsblk`): /dev/vda on UTM,
-#             /dev/sda on Parallels
+#             /dev/sda on Parallels, /dev/nvme0n1 on VMware Fusion
 #   DEV_ENV   optional: local checkout of the dev-env base to build against
 #             instead of the flake input (for developing the base itself)
 

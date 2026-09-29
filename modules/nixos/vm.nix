@@ -1,10 +1,11 @@
-# What every Mac VM platform (Parallels, UTM) shares. The disk layout matches
-# the template's `make vm/bootstrap0`: filesystems labelled "nixos" and "boot".
-# The hypervisor-specific parts are in parallels.nix and utm.nix.
+# What every Mac VM platform (Parallels, UTM, VMware Fusion) shares. The disk
+# layout matches the template's `make vm/bootstrap0`: filesystems labelled
+# "nixos" and "boot". The hypervisor-specific parts are in parallels.nix,
+# utm.nix and vmware.nix.
 { config, lib, ... }:
 
 {
-  config = lib.mkIf (builtins.elem config.devEnv.platform [ "parallels" "utm" ]) {
+  config = lib.mkIf (builtins.elem config.devEnv.platform [ "parallels" "utm" "vmware" ]) {
     boot.loader.systemd-boot.enable = true;
     boot.loader.efi.canTouchEfiVariables = true;
 

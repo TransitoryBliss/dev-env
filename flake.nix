@@ -35,7 +35,7 @@
   };
 
   outputs = inputs@{ self, nixpkgs, ... }: {
-    # System-level module: user account, platform (parallels/utm/wsl), and the
+    # System-level module: user account, platform (parallels/utm/vmware/wsl), and the
     # home-manager wiring that applies homeModules.default to devEnv.user.
     nixosModules.default = import ./modules/nixos { inherit inputs; };
 
@@ -63,6 +63,10 @@
       example-parallels = self.lib.mkHost {
         system = "aarch64-linux";
         modules = [ ./templates/default/users/me.nix ./templates/default/hosts/parallels.nix ];
+      };
+      example-vmware = self.lib.mkHost {
+        system = "aarch64-linux";
+        modules = [ ./templates/default/users/me.nix ./templates/default/hosts/vmware.nix ];
       };
       example-wsl = self.lib.mkHost {
         system = "x86_64-linux";
