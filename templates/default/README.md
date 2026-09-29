@@ -11,7 +11,7 @@ there; this repo holds only what's specific to me and my machines.
 | `nvim/`             | Neovim config (lazy.nvim, LSP, treesitter), linked to `~/.config/nvim` |
 | `herdr/config.toml` | herdr config, linked to `~/.config/herdr/config.toml`        |
 | `Makefile`          | Install and rebuild helpers                                  |
-| `Makefile.local`    | Optional, not included: your additions, e.g. `PI_PACKAGES += pi-linear@0.2.0` |
+| `Makefile.local`    | Optional, not included: your additions, e.g. `PI_PACKAGES += some-pi-package@1.2.3` |
 
 ## First steps
 
@@ -90,7 +90,7 @@ After that, `make switch` inside WSL rebuilds; it picks the host from the hostna
 
 ## Secrets
 
-API keys for agent tools (e.g. `LINEAR_API_KEY` for pi-linear) live in `secrets.yaml`,
+API keys for agent tools (e.g. `LINEAR_API_KEY` for Linear's MCP server) live in `secrets.yaml`,
 encrypted with [sops](https://github.com/getsops/sops) and committed here. Each machine has
 its own [age](https://age-encryption.org) key, which never leaves it; `make switch` decrypts
 the file into `$XDG_RUNTIME_DIR` and every new zsh exports the variables you list.

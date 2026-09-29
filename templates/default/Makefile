@@ -40,7 +40,7 @@ PI_PACKAGES = \
 	pi-web-access@0.31.0
 
 # Optional, per-config additions to the variables above, e.g.
-#   PI_PACKAGES += pi-linear@0.2.0
+#   PI_PACKAGES += some-pi-package@1.2.3
 # Keep this Makefile identical across configs and put your extras there.
 -include Makefile.local
 
