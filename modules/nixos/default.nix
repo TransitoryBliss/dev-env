@@ -11,15 +11,17 @@ in
   imports = [
     inputs.home-manager.nixosModules.home-manager
     inputs.nixos-wsl.nixosModules.default
+    ./vm.nix
     ./parallels.nix
+    ./utm.nix
     ./proxy.nix
     ./wsl.nix
   ];
 
   options.devEnv = {
     platform = lib.mkOption {
-      type = lib.types.enum [ "parallels" "wsl" ];
-      description = "Where this host runs: a Parallels VM, or WSL2 on Windows.";
+      type = lib.types.enum [ "parallels" "utm" "wsl" ];
+      description = "Where this host runs: a Parallels or UTM (Apple Virtualization) VM on a Mac, or WSL2 on Windows.";
     };
 
     user = {

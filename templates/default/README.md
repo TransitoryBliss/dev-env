@@ -19,7 +19,41 @@ there; this repo holds only what's specific to me and my machines.
 2. Set `NIXUSER ?=` in the `Makefile` to your username.
 3. Keep the hosts you need in `hosts/` and `flake.nix`.
 
+## UTM VM on a Mac
+
+[UTM](https://mac.getutm.app) is free and uses Apple's own hypervisor (Apple Virtualization).
+The template's `vm` host is set up for it (`devEnv.platform = "utm"`).
+
+1. Install UTM, and download the NixOS **minimal ISO** for aarch64 from <https://nixos.org/download>.
+2. In UTM: **Create a New Virtual Machine → Virtualize → Linux**, and tick **Use Apple
+   Virtualization**. Boot ISO image: the NixOS ISO. Give it 4+ CPUs, 8+ GB memory and a 64+ GB
+   disk, and leave the network on Shared. Leave "Enable Rosetta" off unless you also set
+   `devEnv.utm.rosetta = true` (and if you set that, tick it: the VM won't finish booting
+   without it).
+3. Start the VM. In its console, run `sudo passwd root` (a temporary password for the
+   installer), then `ip addr` to get the IP (usually `192.168.64.x`) and `lsblk` to see the disk
+   (`vda`).
+4. From the Mac, in this repo (**this wipes the VM disk**):
+   ```sh
+   make vm/bootstrap0 NIXADDR=<ip> HOST=vm NIXBLOCK=/dev/vda
+   ```
+5. After the reboot, shut the VM down, **remove the ISO** (in the VM's settings, select the
+   drive and clear it), and start it again. Check the IP with `ip addr` in the console: UTM's
+   shared network can hand out a different address after a reboot.
+6. `make vm/bootstrap NIXADDR=<ip>`, then connect with `make vm/ssh NIXADDR=<ip>` and continue
+   with "Inside the machine" below.
+
+After changes: `make vm/bootstrap NIXADDR=<ip>`. Updates: `make vm/update NIXADDR=<ip>`.
+
+**Two VMs at once** (say, one for work and one personal): `make vm/ssh` forwards the proxy
+port and the MCP OAuth callback port to the Mac, so the second VM needs its own. Set
+`devEnv.proxy.port` and `devEnv.mcp.callbackPort` in its host file (e.g. 8091 and 19877), and
+the same values as `PROXY_PORT ?=` and `MCP_OAUTH_PORT ?=` in that repo's `Makefile.local`.
+
 ## Parallels VM on a Mac
+
+Use `hosts/parallels.nix` and uncomment the `parallels` entry in `flake.nix`.
+
 
 1. Download the NixOS **minimal ISO** for your Mac's architecture from <https://nixos.org/download>.
 2. In Parallels, create a VM from the ISO (e.g. 4+ CPUs, 8+ GB RAM, 64+ GB disk).
@@ -27,12 +61,13 @@ there; this repo holds only what's specific to me and my machines.
    `ip addr` to get the IP and `lsblk` to see the disk (`sda` or `nvme0n1`).
 4. From the Mac, in this repo (**this wipes the VM disk**):
    ```sh
-   make vm/bootstrap0 NIXADDR=<ip> NIXBLOCK=/dev/sda
+   make vm/bootstrap0 NIXADDR=<ip> HOST=parallels NIXBLOCK=/dev/sda
    ```
-5. After the reboot: `make vm/bootstrap NIXADDR=<ip>`.
+5. After the reboot: `make vm/bootstrap NIXADDR=<ip> HOST=parallels`.
 6. Connect with `make vm/ssh NIXADDR=<ip>`, then continue with "Inside the machine" below.
 
-After changes: `make vm/bootstrap NIXADDR=<ip>`. Updates: `make vm/update NIXADDR=<ip>`.
+After changes: `make vm/bootstrap NIXADDR=<ip> HOST=parallels`. Updates:
+`make vm/update NIXADDR=<ip> HOST=parallels`.
 
 ## WSL2 on Windows
 

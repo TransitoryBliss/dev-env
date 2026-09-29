@@ -3,7 +3,8 @@
 #   HOST      nixosConfigurations entry to build (default: see below)
 #   NIXADDR   IP of the VM (shown by `ip addr` in the VM console)
 #   NIXUSER   devEnv.user.name
-#   NIXBLOCK  install disk inside the VM (check with `lsblk`)
+#   NIXBLOCK  install disk inside the VM (check with `lsblk`): /dev/vda on UTM,
+#             /dev/sda on Parallels
 #   DEV_ENV   optional: local checkout of the dev-env base to build against
 #             instead of the flake input (for developing the base itself)
 
@@ -19,7 +20,7 @@ endif
 endif
 NIXADDR ?= unset
 NIXUSER ?= me
-NIXBLOCK ?= /dev/sda
+NIXBLOCK ?= /dev/vda
 DEV_ENV ?=
 
 # The @playwright/cli release whose playwright-core wants exactly the Chromium
@@ -117,17 +118,20 @@ ifneq ($(DEV_ENV),)
 endif
 
 # SSH in and attach to herdr (or start it), forwarding devEnv.proxy to the Mac:
-# every browser UI in the machine is at http://<name>.localhost:8090 (psm,
+# every browser UI in the machine is at http://<name>.localhost:$(PROXY_PORT) (psm,
 # plannotator, md). `make vm/ssh SSH_CMD=` gives a plain shell instead.
 # LogLevel=ERROR keeps refused forwards (a stale tab retrying) from flooding
 # the terminal. -t because ssh allocates no terminal when given a command.
-# MCP_OAUTH_PORT is devEnv.mcp.callbackPort, so pi's MCP OAuth callbacks
-# reach the machine from the Mac's browser.
+# PROXY_PORT is devEnv.proxy.port, and MCP_OAUTH_PORT is devEnv.mcp.callbackPort,
+# so pi's MCP OAuth callbacks reach the machine from the Mac's browser. A second
+# VM running at the same time needs its own values for both: set them in the
+# host file and, to match, in Makefile.local.
 SSH_CMD ?= herdr
+PROXY_PORT ?= 8090
 MCP_OAUTH_PORT ?= 19876
 vm/ssh:
 	@test "$(NIXADDR)" != "unset" || (echo "set NIXADDR=<vm-ip>" && exit 1)
-	ssh -t -o LogLevel=ERROR -L 8090:localhost:8090 \
+	ssh -t -o LogLevel=ERROR -L $(PROXY_PORT):localhost:$(PROXY_PORT) \
 		-L $(MCP_OAUTH_PORT):127.0.0.1:$(MCP_OAUTH_PORT) $(NIXUSER)@$(NIXADDR) $(SSH_CMD)
 
 # Run inside the machine (VM or WSL), from this repo.

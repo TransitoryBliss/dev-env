@@ -1,7 +1,7 @@
 # dev-env
 
 A NixOS development environment for AI-assisted coding, packaged as reusable modules.
-It runs as a Parallels VM on a Mac or under WSL2 on Windows, and gives you:
+It runs as a UTM or Parallels VM on a Mac, or under WSL2 on Windows, and gives you:
 
 - **Agents:** [pi](https://github.com/earendil-works/pi) and [Claude Code](https://claude.com/claude-code),
   with [rtk](https://github.com/rtk-ai/rtk) cutting the tokens command output costs, and
@@ -45,7 +45,7 @@ The template's README covers installing on each platform. For a filled-in privat
 | Path                 | What                                                       |
 | -------------------- | ---------------------------------------------------------- |
 | `flake.nix`          | Exports `nixosModules`, `homeModules`, `lib.mkHost`, the template |
-| `modules/nixos/`     | User account, Nix settings, platforms (`parallels.nix`, `wsl.nix`) |
+| `modules/nixos/`     | User account, Nix settings, platforms (`vm.nix` shared by `utm.nix` and `parallels.nix`, `wsl.nix`) |
 | `modules/home/`      | Languages, editor, git identities, agents                  |
 | `pkgs/`              | Packages not in nixpkgs (plannotator, pi-session-manager)  |
 | `templates/default/` | Starting point for a private config                        |
@@ -56,7 +56,8 @@ System level, usually in `users/<you>.nix` and `hosts/<machine>.nix`:
 
 | Option                   | Meaning                                                            |
 | ------------------------ | ------------------------------------------------------------------ |
-| `devEnv.platform`        | `"parallels"` or `"wsl"`                                           |
+| `devEnv.platform`        | `"utm"`, `"parallels"` or `"wsl"`                                  |
+| `devEnv.utm.rosetta`     | Run x86_64 binaries through Rosetta on UTM (tick "Enable Rosetta" in UTM first) |
 | `devEnv.user.name`       | Your login name                                                    |
 | `devEnv.user.sshKeys`    | Public keys allowed to SSH in (VM platforms)                       |
 | `devEnv.user.home`       | Home-manager config for you (the options below go here)            |
@@ -132,8 +133,8 @@ For `gh`, run `gh auth login --git-protocol ssh --skip-ssh-key` once per account
   `http://psm.localhost:8090`, `plannotator.localhost`, `md.localhost`. Browsers resolve `*.localhost` to 127.0.0.1 by
   themselves, so no DNS is needed. `make vm/ssh` forwards that one port. Caddy only answers
   hostnames it knows (no DNS rebinding), rejects requests whose `Origin` is another site,
-  including WebSocket upgrades, and strips the backends' CORS headers. On Parallels the
-  firewall is on with only SSH open, so this and the tunnel are the ways in.
+  including WebSocket upgrades, and strips the backends' CORS headers. On the Mac VMs (UTM,
+  Parallels) the firewall is on with only SSH open, so this and the tunnel are the ways in.
 - **Pi Session Manager** ([Dwsy/pi-session-manager](https://github.com/Dwsy/pi-session-manager))
   is built from source in `pkgs/pi-session-manager/`: the headless `pi-session-cli` with its
   web UI embedded, no desktop app. `devEnv.sessionManager.enable` runs it as a systemd user

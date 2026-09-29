@@ -30,7 +30,8 @@ it (see below).
 |---|---|
 | `flake.nix` | Inputs, exports, example hosts. Modules are imported as `import ./modules/x { inherit inputs; }` (they're functions of the flake inputs), so consumers don't need to pass inputs. |
 | `modules/nixos/default.nix` | `devEnv.*` system options: user, platform, configDir, timeZone, unfreePackages. Wires home-manager for `devEnv.user.name`. |
-| `modules/nixos/{parallels,wsl}.nix` | One per `devEnv.platform`. Always imported; everything under `config = lib.mkIf (platform == …)`. |
+| `modules/nixos/{parallels,utm,wsl}.nix` | One per `devEnv.platform`. Always imported; everything under `config = lib.mkIf (platform == …)`. |
+| `modules/nixos/vm.nix` | What the Mac VM platforms share (boot, disks by label, NetworkManager, firewall, SSH), for `platform` `utm` or `parallels`. |
 | `modules/home/*.nix` | Home-manager: `languages` (flags), `editor`, `git` (identities, ghq, `wt`), `agents` (pi, Claude Code, rtk, herdr, plannotator). |
 | `modules/home/wt.zsh` | `wt`: worktree + herdr workspace + agent per task. Sourced from `git.nix`'s `initContent`. |
 | `pkgs/plannotator.nix` | Prebuilt binary per architecture. |
@@ -170,7 +171,7 @@ commit its `flake.lock`.
   diff` wrapper rewrites the output even when redirected, and the result won't apply.
 - **devEnv.proxy** reads `devEnv.sessionManager` from the user's home-manager config to route
   `psm` by itself. Its checks (`Origin`, known hosts) are the reason the tunnel is safe, so
-  keep them when adding services. The Parallels firewall is back on for the same reason.
+  keep them when adding services. The Mac VMs' firewall (`vm.nix`) is back on for the same reason.
   It also routes `plannotator` (19432) and `md` (6419), whose ports are fixed in `agents.nix`
   and `editor.nix`. Plannotator must stay in local mode (`PLANNOTATOR_REMOTE=0`): it detects
   SSH sessions and switches to remote mode by itself, which binds `0.0.0.0`. Local mode
@@ -229,7 +230,16 @@ commit its `flake.lock`.
   `devEnv.scopeRoots` (`mcp.nix` and `secrets.nix` do); git identities don't need it, since
   a worktree's gitdir is inside its main checkout. `_WT_ROOT`/`_WT_SRC` come from `git.nix`,
   so the detached `zsh -f` in `wt done` gets them passed explicitly.
-- **Makefile:** `HOST` defaults to the hostname on NixOS, and is only overridable from the
+- **UTM means Apple Virtualization, not QEMU.** The disk is virtio (`/dev/vda`, the Makefile's
+  `NIXBLOCK` default; Parallels passes `/dev/sda`). `devEnv.utm.rosetta` stays off by default:
+  nixpkgs' `virtualisation.rosetta` mounts UTM's `rosetta` virtiofs share without `nofail`, so
+  enabling it without UTM's "Enable Rosetta" hangs the boot. `vm.nix` is imported where
+  `parallels.nix` used to be, so list options (`extraGroups`) merge in the same order: splitting
+  it left a Parallels host's `toplevel.drvPath` byte-identical. Check that again after touching
+  it. `nix flake check` builds `example-vm` (UTM) and `example-parallels`.
+- **Makefile:** `vm/ssh` forwards `PROXY_PORT` (`devEnv.proxy.port`) and `MCP_OAUTH_PORT`
+  (`devEnv.mcp.callbackPort`); a second VM running at the same time sets both in its host file
+  and `Makefile.local` (read before the `?=` defaults). `HOST` defaults to the hostname on NixOS, and is only overridable from the
   command line. zsh's `HOST` variable must not leak in.
 
 ## Open items
