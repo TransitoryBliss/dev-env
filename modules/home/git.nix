@@ -115,6 +115,17 @@ let
     _wt_gc "$@"
   '';
 
+  # `wt` as an executable, for callers that aren't zsh: pi's bash tool, `!` commands,
+  # the pi extension. In zsh the function of the same name wins, which matters for
+  # `wt done`: only the function can move your shell out of the checkout it deletes.
+  wtBin = pkgs.writeScriptBin "wt" ''
+    #!${pkgs.zsh}/bin/zsh -f
+    export PATH=${lib.makeBinPath (with pkgs; [ git jq gh openssh coreutils util-linux gawk diffutils ])}:${config.home.profileDirectory}/bin:$PATH
+    ${wtEnv}
+    source ${./wt.zsh}
+    wt "$@"
+  '';
+
   # herdr records a linked plugin by its resolved path and re-reads the manifest on
   # every event, so the manifest is copied to a fixed place (not linked into the
   # store, whose path changes on each rebuild) and its command may change freely.
@@ -167,7 +178,7 @@ in
       message = "devEnv.git.worktreeRoot must be under ${home}: scope files are placed there with home.file.";
     }];
 
-    home.packages = [ pkgs.ghq devenvKeys ];
+    home.packages = [ pkgs.ghq devenvKeys wtBin ];
 
     programs.git = {
       enable = true;
@@ -195,6 +206,9 @@ in
       ${wtEnv}
       source ${./wt.zsh}
     '';
+
+    # /wt done, /wt ls, /wt <branch> in pi, and a `wt` tool for the agent (start/list only).
+    home.file.".pi/agent/extensions/wt.ts".source = ./wt-pi.ts;
 
     # Worktree cleanup without asking: hourly, and whenever a herdr workspace closes.
     # `wt gc --auto` only removes what loses nothing (see wt.zsh).

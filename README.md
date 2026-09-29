@@ -109,6 +109,14 @@ branch; if you leave it open, the next hourly run closes and removes it, unless 
 workspace on screen. A herdr notification lists what went. If herdr isn't answering, nothing
 is removed, since there's then no telling which worktrees are open.
 
+**From pi:** `/wt done` in the pi session running inside a worktree checks it, asks, removes
+the worktree and branch, and ends the session (the workspace closes; the session stays in
+`/resume`, which offers to continue in another directory). It refuses, saying why, when work
+would be lost; `/wt done -f` throws the task away after a confirmation. `/wt ls` lists
+worktrees and `/wt [-b] <branch> [prompt]` starts one. The agent gets a `wt` tool that can
+start tasks (always in the background) and list worktrees, but not remove them. Outside zsh,
+`wt` is also an executable, so pi's bash tool and `!` commands can call it directly.
+
 Every account gets its own SSH key, `~/.ssh/id_ed25519_<account>`. Git uses the default
 identity everywhere, except in repos whose remote, or path under `~/source`, matches an override.
 Keys are chosen by URL, so this works with any tool (`git clone`, `ghq get`, `go get`):

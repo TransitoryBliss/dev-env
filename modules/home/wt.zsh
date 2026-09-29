@@ -34,8 +34,9 @@ _wt_usage() {
   print -r -- "wt [-b] <branch> [prompt]  new worktree off the default branch, in its own herdr
                            workspace, with \$WT_AGENT (default: pi) started in it.
                            -b: stay where you are. An existing worktree is reopened.
-wt done [-f]               in a worktree: remove it and its branch, if nothing is lost.
+wt done [-f] [--check]     in a worktree: remove it and its branch, if nothing is lost.
                            -f: remove it anyway, uncommitted and unmerged work too.
+                           --check: change nothing; print the state as JSON.
 wt ls                      every worktree under ${_WT_ROOT/#$HOME/~}, with its state
 wt gc [-n]                 remove merged ones, and closed ones with no new commits.
                            -n: only say what would go. Also runs by itself, hourly
@@ -189,30 +190,51 @@ _wt_new() {
   [[ $focus == --focus ]] || print -r -- "wt: $branch started in ${dir/#$HOME/~}"
 }
 
+# wt done [-f] [--check]. --check (for the pi extension) changes nothing and prints
+# {dir, main, branch, base, state, safe, workspace, closes_this}. $WT_DONE_DELAY
+# delays a detached removal by that many seconds, so whatever runs in the closing
+# workspace (pi) can exit first.
 _wt_done() {
-  local force dir main branch base state wsid log
-  [[ $1 == -f ]] && force=1
+  local force check dir main branch base state wsid log
+  while (( $# )); do
+    case $1 in
+      -f) force=1 ;;
+      --check) check=1 ;;
+      *) print -u2 "wt done: unknown option $1"; return 2 ;;
+    esac
+    shift
+  done
   dir=$(git rev-parse --show-toplevel 2>/dev/null) || { print -u2 "wt: not in a git repo"; return 1 }
   main=$(_wt_main "$dir")
   [[ ${dir:A} != ${main:A} ]] || { print -u2 "wt: $dir is the main checkout, not a worktree"; return 1 }
   branch=$(git -C "$dir" branch --show-current)
-  if [[ -z $force ]]; then
+  if [[ -z $force || -n $check ]]; then
     _wt_fetch "$main"
     base=$(_wt_base "$main")
     state=$(_wt_state "$dir" "$base")
+  fi
+  wsid=$(_wt_workspace_of "$dir")
+  if [[ -n $check ]]; then
+    jq -n --arg dir "$dir" --arg main "$main" --arg branch "$branch" --arg base "$base" \
+      --arg state "$state" --arg ws "$wsid" --arg here "$HERDR_WORKSPACE_ID" \
+      '{dir: $dir, main: $main, branch: $branch, base: $base, state: $state,
+        safe: ($state == "merged" or $state == "in-base"), workspace: $ws,
+        closes_this: ($ws != "" and $ws == $here)}'
+    return
+  fi
+  if [[ -z $force ]]; then
     case $state in
       dirty) print -u2 "wt: uncommitted changes in $dir (wt done -f throws them away)"; return 1 ;;
       unmerged) print -u2 "wt: $branch has commits $base lacks and no merged PR (wt done -f deletes them)"; return 1 ;;
     esac
   fi
-  wsid=$(_wt_workspace_of "$dir")
   cd "$main" # leave the checkout before it goes
   if [[ -n $wsid && $wsid == $HERDR_WORKSPACE_ID ]]; then
     # Removing it closes this workspace, and this shell with it: finish detached.
     log=${XDG_STATE_HOME:-$HOME/.local/state}/wt.log
     mkdir -p "${log:h}"
     print -r -- "wt: removing ${dir/#$HOME/~}; this workspace will close"
-    setsid -f zsh -fc "_WT_ROOT=${(q)_WT_ROOT} _WT_SRC=${(q)_WT_SRC}; source ${(q)_WT_SELF}; _wt_remove ${(q)dir} ${(q)main} ${(q)branch} ${(q)wsid} ${(q)force}" \
+    setsid -f zsh -fc "sleep ${(q)${WT_DONE_DELAY:-0}}; _WT_ROOT=${(q)_WT_ROOT} _WT_SRC=${(q)_WT_SRC}; source ${(q)_WT_SELF}; _wt_remove ${(q)dir} ${(q)main} ${(q)branch} ${(q)wsid} ${(q)force}" \
       </dev/null >>$log 2>&1
   else
     _wt_remove "$dir" "$main" "$branch" "$wsid" "$force" && print -r -- "wt: removed ${dir/#$HOME/~}"
