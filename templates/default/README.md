@@ -127,6 +127,36 @@ After adding a machine to `.sops.yaml`, run `sops updatekeys secrets.yaml` on on
 already decrypt it. Anything an agent can see in its environment it can print, so prefer
 narrowly scoped keys (a read-only Linear key, if that is enough).
 
+## Backups
+
+`home.devEnv.backup.enable = true` backs up agent sessions (pi's `~/.pi/agent/sessions`,
+Claude Code's `~/.claude/projects`) every hour with [restic](https://restic.net), encrypted
+before upload. Off by default. Sessions are chosen by the directory each was started in:
+everything under `~`, minus `exclude` and `excludeScopes` (e.g. an employer's org, which then
+never leaves the machine). `agent-sessions-select` prints what would be uploaded. Enabling it
+also stops Claude Code deleting transcripts after 30 days.
+
+1. Create a bucket, e.g. on Backblaze B2 (the first 10 GB are free), and an application key
+   limited to it.
+2. `sops secrets.yaml`, and add:
+
+   ```yaml
+   restic_repository: s3:https://s3.<region>.backblazeb2.com/<bucket>/agent-sessions
+   restic_password: <long random string>
+   restic_env: |
+     AWS_ACCESS_KEY_ID=<keyID>
+     AWS_SECRET_ACCESS_KEY=<applicationKey>
+   ```
+
+   **Keep `restic_password` in a password manager too.** It's the only way into the backup if
+   the machine that can decrypt `secrets.yaml` is gone.
+3. Enable it and `make switch`. Run it once by hand and check it:
+   `systemctl --user start restic-backups-agent-sessions`, then
+   `restic-agent-sessions snapshots` and `restic-agent-sessions ls latest`.
+
+To restore on a new machine (same username: pi's folder names contain the home path):
+`restic-agent-sessions restore latest --target /`.
+
 ## Developing the base
 
 To try changes to a local checkout of dev-env before publishing them:

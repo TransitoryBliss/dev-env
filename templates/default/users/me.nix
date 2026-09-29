@@ -40,6 +40,13 @@
       #   # scopes."github.com/some-org".env.LINEAR_API_KEY = "some_org_linear_api_key";
       # };
 
+      # Hourly restic backup of agent sessions (pi, Claude Code); needs the
+      # restic_* keys in secrets.yaml. See the README's "Backups".
+      # home.devEnv.backup = {
+      #   enable = true;
+      #   excludeScopes = [ "github.com/your-employer" ];  # never uploaded
+      # };
+
       # MCP servers for pi: everywhere, and per org (like git.overrides).
       # `oauth = true` uses the callback port `make vm/ssh` forwards.
       # home.devEnv.mcp = {

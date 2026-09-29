@@ -37,6 +37,7 @@ it (see below).
 | `pkgs/pi-session-manager/` | Built from source, with our `Cargo.lock` and `security.patch`. |
 | `modules/nixos/proxy.nix` | `devEnv.proxy`: Caddy on one localhost port, a `<name>.localhost` vhost per service. |
 | `modules/home/session-manager.nix` | `devEnv.sessionManager`: PSM user service and pi extension. |
+| `modules/home/backup.nix` | `devEnv.backup`: opt-in restic backup of agent sessions, selected per session folder by recorded cwd (`agent-sessions-select`); also sets Claude Code's `cleanupPeriodDays`. Enables user lingering from `modules/nixos/default.nix`. |
 | `modules/home/secrets.nix` | `devEnv.secrets`: sops-nix, exports decrypted secrets from `.zshenv`, globally and per `host/owner` scope (re-checked on `cd`). |
 | `modules/home/mcp.nix` | `devEnv.mcp`: MCP servers for pi, global and per `host/owner` scope (via `ancestorConfigRoots` = the home directory, absolute since a bare `~` is rejected: per-scope roots make the adapter warn outside them), fixed OAuth callback port. |
 
@@ -177,6 +178,17 @@ commit its `flake.lock`.
 - **herdr:** plugin commands (`herdr plugin list/install`) need a running server; the
   template's `agents/setup` starts `herdr server` in the background. Known conflict:
   herdr-annotate's suggested `prefix+o` clashes with herdr's own default for notifications.
+- **`devEnv.backup` selects by cwd, not by folder name.** pi's session folders
+  (`--home-u-a-b--`) and Claude Code's (`-home-u-a-b`) both turn `/` into `-`, so `a/b-c` and
+  `a-b/c` share a folder name. The selector reads every session header in a folder (pi nests
+  subagent runs inside the parent's folder) and uploads the folder only if all of them are wanted;
+  a mixed folder is skipped and logged, never partly uploaded. `sops-nix` checks keys at build
+  time, so the `restic_*` secrets must exist before `enable = true`. `~/.claude/settings.json` is
+  merged by an activation script, not managed, because `rtk init` writes to it; `cleanupPeriodDays`
+  is never `0` (older Claude Code read that as "don't save transcripts"). To test without a
+  bucket: `RESTIC_REPOSITORY=/tmp/r RESTIC_PASSWORD=x restic init`, then `backup --files-from`
+  the output of `agent-sessions-select`, and `HOME=<scratch>` with fake session headers for the
+  selection rules.
 - **Secrets never go through Nix values.** `devEnv.secrets.env` maps variable names to keys in
   the sops file; `.zshenv` reads the decrypted file (`~/.config/sops-nix/secrets/<key>`) at
   shell start, so values never reach the store. sops-nix's home-manager module is imported on

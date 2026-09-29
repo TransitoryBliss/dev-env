@@ -80,6 +80,7 @@ Home level, under `devEnv.user.home`:
 | `devEnv.sessionManager.enable`       | Pi Session Manager: server, web UI and pi extension  |
 | `devEnv.secrets.sopsFile` / `.env`   | Environment variables from a sops-encrypted file (see the template README) |
 | `devEnv.secrets.scopes."<host/owner>".env` | The same, replacing the global ones in repos under one org or user |
+| `devEnv.backup.enable` / `.excludeScopes` | Opt-in hourly restic backup of agent sessions (pi, Claude Code), chosen by the directory each session was started in (see the template README) |
 | `devEnv.mcp.servers`                 | MCP servers for pi in every directory (`~/.config/mcp/mcp.json`) |
 | `devEnv.mcp.scopes."<host/owner>"`   | MCP servers for repos under one org or user; `inheritGlobal = false` hides the global ones |
 | `devEnv.mcp.callbackPort`            | Fixed OAuth callback port (default 19876), forwarded by `make vm/ssh` |

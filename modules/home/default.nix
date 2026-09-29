@@ -11,6 +11,7 @@ in
 {
   imports = [
     (import ./agents.nix { inherit inputs; })
+    ./backup.nix
     ./editor.nix
     ./git.nix
     (import ./languages.nix { inherit inputs; })

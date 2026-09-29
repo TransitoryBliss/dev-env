@@ -77,6 +77,8 @@ in
       extraGroups = [ "wheel" "docker" ];
       shell = pkgs.zsh;
       openssh.authorizedKeys.keys = user.sshKeys;
+      # User timers (devEnv.backup) run without a login session.
+      linger = lib.mkIf config.home-manager.users.${user.name}.devEnv.backup.enable true;
     };
     security.sudo.wheelNeedsPassword = false;
 
