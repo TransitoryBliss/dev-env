@@ -11,6 +11,11 @@
     stylua
     yaml-language-server
     nil # Nix language server; the config itself is Nix
+    bash-language-server
+    shellcheck # bash-language-server's diagnostics
+    vscode-langservers-extracted # jsonls (also html, css, eslint servers)
+    marksman # Markdown
+    taplo # TOML
     # Markdown: go-grip previews in the browser, glow renders in the terminal.
     go-grip
     glow
