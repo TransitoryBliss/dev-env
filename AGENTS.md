@@ -195,10 +195,15 @@ commit its `flake.lock`.
 - **devEnv.proxy** reads `devEnv.sessionManager` from the user's home-manager config to route
   `psm` by itself. Its checks (`Origin`, known hosts) are the reason the tunnel is safe, so
   keep them when adding services. The Mac VMs' firewall (`vm.nix`) is back on for the same reason.
-  It also routes `plannotator` (19432) and `md` (6419), whose ports are fixed in `agents.nix`
-  and `editor.nix`. Plannotator must stay in local mode (`PLANNOTATOR_REMOTE=0`): it detects
-  SSH sessions and switches to remote mode by itself, which binds `0.0.0.0`. Local mode
-  ignores `PLANNOTATOR_URL_HOST`, so its printed link keeps saying `localhost:19432`.
+  It also routes `md` (6419, fixed in `editor.nix`) and plannotator, whose ports come from
+  `devEnv.plannotator` in `agents.nix`: `PLANNOTATOR_PORT` is a range (default 19432-19439,
+  one port per plan or review waiting for a decision, so parallel `wt --plan` sessions don't
+  fail with "Port … in use"), routed as `plannotator` (first port) and
+  `plannotator-<port>` (every port). The proxy reads the range from the user's home-manager
+  config. The standalone `plannotator` binary (herdr-annotate) parses ranges too.
+  Plannotator must stay in local mode (`PLANNOTATOR_REMOTE=0`): it detects SSH sessions and
+  switches to remote mode by itself, which binds `0.0.0.0`. Local mode ignores
+  `PLANNOTATOR_URL_HOST`, so its printed link says `localhost:<port>`.
 - **herdr:** plugin commands (`herdr plugin list/install`) need a running server; the
   template's `agents/setup` starts `herdr server` in the background. Known conflict:
   herdr-annotate's suggested `prefix+o` clashes with herdr's own default for notifications.
@@ -274,6 +279,19 @@ commit its `flake.lock`.
   To test it for real: start plain `pi` (no prompt, no model call) in a scratch worktree's pane
   with `herdr pane run`, then `herdr pane send-text <pane> "/wt done"` and `send-keys Enter`
   twice (the first one goes to the autocomplete popup) and once more for Yes.
+  **`wt --plan`** types `pi '<prompt>' --plan`, prompt *first*: pi parses the command line
+  before plannotator registers `--plan` as a boolean, so `pi --plan '<prompt>'` takes the
+  prompt as the flag's value and starts plan mode with no first message (no turn, no session
+  file, 0% context). `--plan=true` also works. The prompt gets a sentence telling the agent to
+  write to `.wt/plan.md` (plannotator only accepts `.md`/`.mdx` inside cwd), and `/.wt/` goes
+  into the repo's `info/exclude` (the common dir, so every worktree sees it; no global
+  gitignore). Ignored files don't block `git worktree remove`. `_wt_remove` copies `.wt/` to
+  `~/.local/state/wt/plans/...` first and refuses to remove if that copy fails. `--plan`
+  requires a prompt (otherwise the agent picks `PLAN.md`, which git sees) and a pi agent;
+  check the agent's first word via an array (`local -a words=(${(z)agent})`):
+  `${${(z)agent}[1]}` on a one-word value takes the first *letter*. To test cheaply:
+  `WT_AGENT="pi --model pi-claude-code-provider/haiku"` and a prompt saying "do not ask
+  questions, submit right away"; then check `ss -ltn` for one port per waiting plan.
   Resuming a session whose worktree is gone works interactively (pi offers to continue in the
   current directory); `pi -p --session` refuses with "Stored session working directory does
   not exist".

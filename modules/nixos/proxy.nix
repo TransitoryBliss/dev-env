@@ -53,9 +53,14 @@ in
     devEnv.proxy.services = {
       psm = lib.mkIf hm.devEnv.sessionManager.enable hm.devEnv.sessionManager.port;
       # Fixed ports set in modules/home/agents.nix and editor.nix.
-      plannotator = lib.mkDefault 19432;
+      plannotator = lib.mkDefault hm.devEnv.plannotator.firstPort;
       md = lib.mkDefault 6419;
-    };
+    }
+    # plannotator uses a port range (parallel plans); each port gets its own name,
+    # matching the port in the URL plannotator prints.
+    // lib.listToAttrs (map (p: lib.nameValuePair "plannotator-${toString p}" (lib.mkDefault p))
+      (lib.range hm.devEnv.plannotator.firstPort
+        (hm.devEnv.plannotator.firstPort + hm.devEnv.plannotator.portCount - 1)));
 
     services.caddy = {
       enable = true;

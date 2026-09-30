@@ -31,9 +31,13 @@ wt() {
 }
 
 _wt_usage() {
-  print -r -- "wt [-b] <branch> [prompt]  new worktree off the default branch, in its own herdr
+  print -r -- "wt [-b] [--plan] <branch> [prompt]
+                           new worktree off the default branch, in its own herdr
                            workspace, with \$WT_AGENT (default: pi) started in it.
                            -b: stay where you are. An existing worktree is reopened.
+                           --plan: start pi in plannotator's plan mode; the plan goes
+                           to .wt/plan.md, kept out of git and saved to
+                           ~/.local/state/wt/plans/ when the worktree is removed.
 wt done [-f] [--check]     in a worktree: remove it and its branch, if nothing is lost.
                            -f: remove it anyway, uncommitted and unmerged work too.
                            --check: change nothing; print the state as JSON.
@@ -145,8 +149,32 @@ _wt_scan() {
 }
 
 # _wt_remove <dir> <main> <branch> <workspace id or ""> <force: "" or 1>
+# Copies a worktree's .wt/ (plans from `wt --plan`) to
+# ~/.local/state/wt/plans/<host>/<owner>/<repo>/<branch>-<time>/, if it has any markdown.
+_wt_save_plan() {
+  local dir=$1 rel dest
+  local -a plans=($dir/.wt/**/*.md(N.) $dir/.wt/**/*.mdx(N.))
+  (( $#plans )) || return 0
+  rel=${${dir:A}#${_WT_ROOT:A}/}
+  [[ $rel != /* ]] || rel=local/${dir:t}
+  dest=${XDG_STATE_HOME:-$HOME/.local/state}/wt/plans/$rel-$(date +%Y%m%d-%H%M%S)
+  mkdir -p "$dest" && cp -R "$dir/.wt/." "$dest/" || return 1
+  print -r -- "wt: saved plan to ${dest/#$HOME/~}"
+}
+
+# Excludes /.wt/ in the repo's own info/exclude (shared by all its worktrees): no
+# global gitignore, and no change to a tracked .gitignore.
+_wt_exclude() {
+  local ex
+  ex=$(git -C "$1" rev-parse --path-format=absolute --git-common-dir)/info/exclude || return
+  mkdir -p "${ex:h}"
+  grep -qxF '/.wt/' "$ex" 2>/dev/null || print -r -- '/.wt/' >>"$ex"
+}
+
 _wt_remove() {
   local dir=$1 main=$2 branch=$3 wsid=$4 force=$5 d
+  # Save the plan first; if that fails, keep the worktree rather than lose it.
+  _wt_save_plan "$dir" || { print -u2 "wt: couldn't save the plan in $dir/.wt; not removing it"; return 1 }
   if [[ -n $wsid ]]; then
     herdr worktree remove --workspace "$wsid" ${force:+--force} >/dev/null || return
   else
@@ -162,10 +190,24 @@ _wt_remove() {
 }
 
 _wt_new() {
-  local focus=--focus
-  [[ $1 == -b ]] && { focus=--no-focus; shift }
-  local branch=$1 prompt=$2 main base out pane dir existing
+  local focus=--focus plan
+  while [[ $1 == -* ]]; do
+    case $1 in
+      -b) focus=--no-focus ;;
+      --plan) plan=1 ;;
+      *) print -u2 "wt: unknown option $1"; return 2 ;;
+    esac
+    shift
+  done
+  local branch=$1 prompt=$2 agent=${WT_AGENT:-pi} main base out pane dir existing
   [[ -n $branch ]] || { _wt_usage; return 2 }
+  if [[ -n $plan ]]; then
+    # An array, not ${${(z)agent}[1]}: for a one-word agent that takes the first letter.
+    local -a words=(${(z)agent})
+    [[ ${words[1]:t} == pi ]] || { print -u2 "wt: --plan needs pi, not $agent"; return 1 }
+    # Without a prompt the agent picks its own plan file (PLAN.md), which git sees.
+    [[ -n $prompt ]] || { print -u2 "wt: --plan needs a prompt saying what to plan"; return 2 }
+  fi
   [[ -n $HERDR_ENV ]] || { print -u2 "wt: run it inside herdr"; return 1 }
   main=$(_wt_main .) || { print -u2 "wt: not in a git repo"; return 1 }
 
@@ -186,7 +228,15 @@ _wt_new() {
   [[ -n $pane ]] || { print -u2 "wt: unexpected reply from herdr: $out"; return 1 }
   # Carry direnv trust over, but only for an .envrc identical to the main checkout's.
   [[ -f $dir/.envrc ]] && cmp -s "$dir/.envrc" "$main/.envrc" && direnv allow "$dir"
-  herdr pane run "$pane" "${WT_AGENT:-pi}${prompt:+ ${(qq)prompt}}" >/dev/null
+  if [[ -n $plan ]]; then
+    _wt_exclude "$main"
+    # One line: it's typed into the pane's shell.
+    prompt="$prompt (Write the plan to .wt/plan.md: that directory is kept out of git and saved when the worktree is removed.)"
+  fi
+  # --plan goes after the prompt: pi parses the command line before plannotator
+  # registers --plan as a boolean, so `--plan '<prompt>'` swallows the prompt as
+  # the flag's value and pi starts with no first message.
+  herdr pane run "$pane" "$agent${prompt:+ ${(qq)prompt}}${plan:+ --plan}" >/dev/null
   [[ $focus == --focus ]] || print -r -- "wt: $branch started in ${dir/#$HOME/~}"
 }
 
@@ -215,11 +265,13 @@ _wt_done() {
   fi
   wsid=$(_wt_workspace_of "$dir")
   if [[ -n $check ]]; then
+    local -a plans=($dir/.wt/**/*.md(N.) $dir/.wt/**/*.mdx(N.))
     jq -n --arg dir "$dir" --arg main "$main" --arg branch "$branch" --arg base "$base" \
       --arg state "$state" --arg ws "$wsid" --arg here "$HERDR_WORKSPACE_ID" \
+      --argjson plan $(( $#plans > 0 )) \
       '{dir: $dir, main: $main, branch: $branch, base: $base, state: $state,
         safe: ($state == "merged" or $state == "in-base"), workspace: $ws,
-        closes_this: ($ws != "" and $ws == $here)}'
+        closes_this: ($ws != "" and $ws == $here), has_plan: ($plan == 1)}'
     return
   fi
   if [[ -z $force ]]; then

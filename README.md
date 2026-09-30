@@ -113,9 +113,19 @@ is removed, since there's then no telling which worktrees are open.
 the worktree and branch, and ends the session (the workspace closes; the session stays in
 `/resume`, which offers to continue in another directory). It refuses, saying why, when work
 would be lost; `/wt done -f` throws the task away after a confirmation. `/wt ls` lists
-worktrees and `/wt [-b] <branch> [prompt]` starts one. The agent gets a `wt` tool that can
-start tasks (always in the background) and list worktrees, but not remove them. Outside zsh,
-`wt` is also an executable, so pi's bash tool and `!` commands can call it directly.
+worktrees and `/wt [-b] [--plan] <branch> [prompt]` starts one. The agent gets a `wt` tool that
+can start tasks (always in the background, optionally in plan mode) and list worktrees, but not
+remove them. Outside zsh, `wt` is also an executable, so pi's bash tool and `!` commands can
+call it directly.
+
+**Planning first:** `wt --plan <branch> "<what to plan>"` starts pi in plannotator's plan mode.
+The agent writes its plan to `.wt/plan.md` in the worktree, which is excluded from git in the
+repo's own `.git/info/exclude` (so it never makes the worktree dirty or lands in a PR), and
+submits it for review in plannotator. Once you approve, it implements the plan in the same
+worktree. When the worktree is removed, `.wt/` is first copied to
+`~/.local/state/wt/plans/<host>/<owner>/<repo>/<branch>-<time>/`. From one pi session you can
+ask the agent to plan several tasks in parallel; each waiting plan gets its own plannotator
+port (see below).
 
 Every account gets its own SSH key, `~/.ssh/id_ed25519_<account>`. Git uses the default
 identity everywhere, except in repos whose remote, or path under `~/source`, matches an override.
@@ -142,11 +152,15 @@ For `gh`, run `gh auth login --git-protocol ssh --skip-ssh-key` once per account
 - **herdr** comes from its own flake, pinned by tag in `flake.nix`.
 - **plannotator** is a prebuilt release per architecture, in `pkgs/plannotator.nix`. Bump
   `version` and both hashes to update. There's no browser in the machine, so it serves its UI
-  on `127.0.0.1:19432` (local mode, forced with `PLANNOTATOR_REMOTE=0`: remote mode binds
-  `0.0.0.0`). Open it at `http://plannotator.localhost:8090` through `devEnv.proxy`. The URL it
-  prints still says `localhost:19432`, because local mode ignores `PLANNOTATOR_URL_HOST`.
+  on `127.0.0.1`, ports `19432`–`19439` (`devEnv.plannotator.firstPort`/`portCount`): each
+  plan or review waiting for a decision holds one, so parallel plans don't collide. It runs in
+  local mode, forced with `PLANNOTATOR_REMOTE=0` (remote mode binds `0.0.0.0`). Open the
+  first port at `http://plannotator.localhost:8090` and any port at
+  `http://plannotator-<port>.localhost:8090` through `devEnv.proxy`. The URL it prints says
+  `localhost:<port>`, because local mode ignores `PLANNOTATOR_URL_HOST`: take the port from it.
 - **The local proxy** (`devEnv.proxy`) is Caddy on `127.0.0.1:8090`, routing by hostname:
-  `http://psm.localhost:8090`, `plannotator.localhost`, `md.localhost`. Browsers resolve `*.localhost` to 127.0.0.1 by
+  `http://psm.localhost:8090`, `plannotator.localhost` (and `plannotator-<port>.localhost`),
+  `md.localhost`. Browsers resolve `*.localhost` to 127.0.0.1 by
   themselves, so no DNS is needed. `make vm/ssh` forwards that one port. Caddy only answers
   hostnames it knows (no DNS rebinding), rejects requests whose `Origin` is another site,
   including WebSocket upgrades, and strips the backends' CORS headers. On the Mac VMs (UTM,

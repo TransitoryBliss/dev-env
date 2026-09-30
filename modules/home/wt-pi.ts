@@ -5,7 +5,8 @@
  *                              remove it and its branch, then end the session (its
  *                              directory is gone, and the workspace closes).
  *   /wt ls                     every worktree and its state
- *   /wt [-b] <branch> [prompt] start a task in a new worktree
+ *   /wt [-b] [--plan] <branch> [prompt]
+ *                              start a task in a new worktree (--plan: in plan mode)
  *
  * The agent gets a `wt` tool that can start tasks (always in the background) and list
  * worktrees, but not remove them: finishing or throwing away work stays with the user.
@@ -24,6 +25,7 @@ interface DoneCheck {
 	safe: boolean;
 	workspace: string;
 	closes_this: boolean;
+	has_plan: boolean;
 }
 
 const home = process.env.HOME ?? "";
@@ -55,9 +57,10 @@ export default function (pi: ExtensionAPI) {
 		}
 		const lost = force && !s.safe ? `\n\nThis THROWS AWAY work: the worktree is ${s.state}.` : "";
 		const closes = s.closes_this ? " This closes this herdr workspace." : "";
+		const plan = s.has_plan ? " The plan in .wt/ is saved to ~/.local/state/wt/plans/ first." : "";
 		const ok = await ctx.ui.confirm(
 			force ? "Throw this task away?" : "Finish this task?",
-			`Remove ${tilde(s.dir)} and ${what}.${closes} The session ends and stays in /resume.${lost}`,
+			`Remove ${tilde(s.dir)} and ${what}.${closes}${plan} The session ends and stays in /resume.${lost}`,
 		);
 		if (!ok) return;
 
@@ -75,7 +78,7 @@ export default function (pi: ExtensionAPI) {
 	}
 
 	pi.registerCommand("wt", {
-		description: "Worktrees: /wt done [-f], /wt ls, /wt [-b] <branch> [prompt]",
+		description: "Worktrees: /wt done [-f], /wt ls, /wt [-b] [--plan] <branch> [prompt]",
 		getArgumentCompletions: (prefix) =>
 			[
 				{ value: "done", label: "done", description: "finish this worktree's task, if nothing is lost" },
@@ -98,10 +101,19 @@ export default function (pi: ExtensionAPI) {
 				ctx.ui.notify((r.stdout || r.stderr).trim(), r.code === 0 ? "info" : "error");
 				return;
 			}
-			// /wt [-b] <branch> [prompt...]: keep the prompt as typed after the branch.
-			const m = args.trim().match(/^(-b\s+)?(\S+)\s*([\s\S]*)$/);
-			if (!m) return;
-			const r = await wt([...(m[1] ? ["-b"] : []), m[2], ...(m[3] ? [m[3]] : [])], ctx.cwd);
+			// /wt [-b] [--plan] <branch> [prompt...]: options in any order, then the
+			// branch; the prompt is kept as typed.
+			let rest = args.trim();
+			const opts: string[] = [];
+			for (let m; (m = rest.match(/^(-b|--plan)(?:\s+|$)/)); rest = rest.slice(m[0].length)) {
+				if (!opts.includes(m[1])) opts.push(m[1]);
+			}
+			const m = rest.match(/^(\S+)\s*([\s\S]*)$/);
+			if (!m || m[1].startsWith("-")) {
+				ctx.ui.notify("Usage: /wt [-b] [--plan] <branch> [prompt]", "error");
+				return;
+			}
+			const r = await wt([...opts, m[1], ...(m[2] ? [m[2]] : [])], ctx.cwd);
 			if (r.code !== 0) ctx.ui.notify(firstLine(r.stderr) || "wt failed", "error");
 			else if (r.stdout.trim()) ctx.ui.notify(r.stdout.trim(), "info");
 		},
@@ -112,23 +124,29 @@ export default function (pi: ExtensionAPI) {
 		label: "Worktree",
 		description:
 			"Start a task in its own git worktree, herdr workspace and pi session (runs in the background, " +
-			"off the repo's default branch), or list worktrees and their state. Cannot remove worktrees.",
+			"off the repo's default branch), or list worktrees and their state. With plan: true the new " +
+			"session starts in plannotator's plan mode and writes a plan for the user to review before " +
+			"implementing. Cannot remove worktrees.",
 		promptSnippet: "wt: start parallel tasks in their own git worktree and pi session; list worktrees",
 		promptGuidelines: [
 			"Use wt with action start to hand independent work to parallel agents: one short kebab-case branch per task, and a self-contained prompt (the new agent sees nothing of this conversation).",
+			"Set plan: true when the user wants a task planned (and reviewed) before it is implemented; the prompt must then say what to plan.",
 			"Never try to remove or clean up worktrees; the user does that with /wt done, and merged ones are removed automatically.",
 		],
 		parameters: Type.Object({
 			action: StringEnum(["start", "list"] as const),
 			branch: Type.Optional(Type.String({ description: "New branch name (start)" })),
 			prompt: Type.Optional(Type.String({ description: "Prompt for the new agent (start)" })),
+			plan: Type.Optional(
+				Type.Boolean({ description: "Start the new agent in plan mode (start; needs a prompt)" }),
+			),
 		}),
 		async execute(_id, params, signal, _onUpdate, ctx) {
 			let args: string[];
 			if (params.action === "list") args = ["ls"];
 			else {
 				if (!params.branch) throw new Error("branch is required for start");
-				args = ["-b", params.branch, ...(params.prompt ? [params.prompt] : [])];
+				args = ["-b", ...(params.plan ? ["--plan"] : []), params.branch, ...(params.prompt ? [params.prompt] : [])];
 			}
 			const r = await pi.exec("wt", args, { cwd: ctx.cwd, timeout: 120_000, signal });
 			if (r.code !== 0) throw new Error((r.stderr || r.stdout).trim() || `wt exited ${r.code}`);
