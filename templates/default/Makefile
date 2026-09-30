@@ -230,7 +230,8 @@ mac/router:
 		{ caddy validate --config "$(ROUTER_DIR)/router/Caddyfile" --adapter caddyfile; exit 1; }
 	@mkdir -p "$$(dirname "$(ROUTER_PLIST)")"
 	@printf '%s\n' "$$ROUTER_PLIST_XML" | sed "s|@CADDY@|$$(command -v caddy)|" > "$(ROUTER_PLIST)"
-	-@launchctl bootout gui/$$(id -u)/$(ROUTER_LABEL) 2>/dev/null
+	@# Stop a running router first; on a first install there is none, and that's fine.
+	@launchctl bootout gui/$$(id -u)/$(ROUTER_LABEL) 2>/dev/null || true
 	@launchctl bootstrap gui/$$(id -u) "$(ROUTER_PLIST)"
 	@echo "Router running: http://localhost:$(PROXY_PORT). Reconnect with make vm/ssh."
 
