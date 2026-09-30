@@ -30,6 +30,7 @@ wt() {
     ls) shift; _wt_ls "$@" ;;
     gc) shift; _wt_gc "$@" ;;
     task) shift; _wt_task "$@" ;;
+    status) shift; _wt_task_status "$@" ;;
     '' | -h | --help) _wt_usage ;;
     *) _wt_new "$@" ;;
   esac
@@ -58,7 +59,7 @@ wt task [-b] [--plan | --from-plan <file>] <name> <repo>... [-- <prompt>]
                            lead pi session (in the task folder) and a tab per repo.
                            Again with more repos: adds them. --from-plan: the approved
                            plan the lead implements.
-wt task status [name]      each repo's PR, checks, and what it waits for
+wt task status [name]      each repo's PR, checks, and what it waits for (also: wt status)
 wt task done [-f] [name]   remove every worktree, branch and the task, if nothing is lost
 wt task ls                 every task
 
@@ -227,6 +228,12 @@ _wt_new() {
   done
   local branch=$1 prompt=$2 agent=${WT_AGENT:-pi} main base out pane dir existing
   [[ -n $branch ]] || { _wt_usage; return 2 }
+  # A command name is never a branch: `wt -b status` would otherwise make one.
+  if [[ $branch == (done|ls|gc|task|status) ]]; then
+    print -u2 "wt: \"$branch\" is a wt command, not a branch name"
+    print -u2 "usage: wt [-b] [--plan] <branch> [prompt]"
+    return 2
+  fi
   # The branch comes first: `wt --plan "<prompt>"` would otherwise take the prompt as
   # the branch and then complain that the prompt is missing.
   if ! git check-ref-format --branch "$branch" >/dev/null 2>&1; then

@@ -156,11 +156,16 @@ export default function (pi: ExtensionAPI) {
 				{ value: "done -f", label: "done -f", description: "throw this task away, unmerged work too" },
 				{ value: "ls", label: "ls", description: "every worktree and its state" },
 				{ value: "task ", label: "task", description: "a task across repos: task <name> <repo>... -- <prompt>" },
+				{ value: "status", label: "status", description: "this task's PRs, checks and merge order" },
 				{ value: "task status", label: "task status", description: "this task's PRs, checks and merge order" },
 				{ value: "task ls", label: "task ls", description: "every task" },
 			].filter((i) => i.value.startsWith(prefix.trim())),
 		handler: async (args, ctx) => {
 			const words = args.trim().split(/\s+/).filter(Boolean);
+			if (words[0] === "status") {
+				await task(["status", ...words.slice(1)].join(" "), ctx);
+				return;
+			}
 			if (words[0] === "task") {
 				await task(args.trim().slice(4), ctx);
 				return;
