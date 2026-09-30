@@ -201,6 +201,17 @@ _wt_new() {
   done
   local branch=$1 prompt=$2 agent=${WT_AGENT:-pi} main base out pane dir existing
   [[ -n $branch ]] || { _wt_usage; return 2 }
+  # The branch comes first: `wt --plan "<prompt>"` would otherwise take the prompt as
+  # the branch and then complain that the prompt is missing.
+  if ! git check-ref-format --branch "$branch" >/dev/null 2>&1; then
+    if [[ $branch == *[[:space:]]* ]]; then
+      print -u2 "wt: \"$branch\" looks like a prompt, not a branch name; the branch comes first"
+    else
+      print -u2 "wt: \"$branch\" isn't a valid branch name"
+    fi
+    print -u2 "usage: wt [-b] [--plan] <branch> [prompt]"
+    return 2
+  fi
   if [[ -n $plan ]]; then
     # An array, not ${${(z)agent}[1]}: for a one-word agent that takes the first letter.
     local -a words=(${(z)agent})
