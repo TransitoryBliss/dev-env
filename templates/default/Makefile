@@ -57,7 +57,7 @@ SSH_OPTIONS = -o PubkeyAuthentication=no -o UserKnownHostsFile=/dev/null -o Stri
 SSH_SHARED = -o ControlMaster=auto -o ControlPath=/tmp/dev-env-ssh-%C -o ControlPersist=10m
 RSYNC_EXCLUDES = --exclude=.git --exclude=result
 
-.PHONY: vm/bootstrap0 vm/bootstrap vm/update vm/copy vm/ssh switch agents/setup check
+.PHONY: vm/bootstrap0 vm/bootstrap vm/update vm/copy vm/ssh vm/untunnel mac/router mac/router-remove switch agents/setup check
 
 # Step 1: from the NixOS installer ISO (after `sudo passwd root`).
 # Wipes $(NIXBLOCK), partitions it, and installs the flake. The flake is locked
@@ -131,10 +131,112 @@ endif
 SSH_CMD ?= herdr-attach
 PROXY_PORT ?= 8090
 MCP_OAUTH_PORT ?= 19876
+# With the Mac router (`make mac/router`, once), vm/ssh doesn't forward a port:
+# it starts a background tunnel from ~/.dev-env/tunnels/<MACHINE>.sock to the
+# VM's proxy, which outlives the session (`make vm/untunnel` closes it), and the
+# router sends http://*.<MACHINE>.localhost:$(PROXY_PORT) there. Every VM can
+# then use the same PROXY_PORT at once. MACHINE is the VM's
+# devEnv.proxy.machineName, its hostname by default.
+MACHINE ?= $(HOST)
+ROUTER_DIR ?= $(HOME)/.dev-env
+TUNNEL = $(ROUTER_DIR)/tunnels/$(MACHINE)
 vm/ssh:
 	@test "$(NIXADDR)" != "unset" || (echo "set NIXADDR=<vm-ip>" && exit 1)
-	ssh -t -o LogLevel=ERROR -L $(PROXY_PORT):localhost:$(PROXY_PORT) \
-		-L $(MCP_OAUTH_PORT):127.0.0.1:$(MCP_OAUTH_PORT) $(NIXUSER)@$(NIXADDR) $(SSH_CMD)
+	@if test -f "$(ROUTER_DIR)/router/Caddyfile"; then \
+		mkdir -p "$(ROUTER_DIR)/tunnels" && chmod 700 "$(ROUTER_DIR)/tunnels"; \
+		ssh -S "$(TUNNEL).ctl" -O check $(NIXUSER)@$(NIXADDR) 2>/dev/null || { \
+			rm -f "$(TUNNEL).ctl"; \
+			ssh -f -N -M -S "$(TUNNEL).ctl" -o ExitOnForwardFailure=yes -o StreamLocalBindUnlink=yes \
+				-o ServerAliveInterval=15 -o ServerAliveCountMax=3 -o LogLevel=ERROR \
+				-L "$(TUNNEL).sock:localhost:$(PROXY_PORT)" $(NIXUSER)@$(NIXADDR) || exit 1; }; \
+		FWD=; \
+	else \
+		FWD="-L $(PROXY_PORT):localhost:$(PROXY_PORT)"; \
+	fi; \
+	ssh -t -o LogLevel=ERROR $$FWD -L $(MCP_OAUTH_PORT):127.0.0.1:$(MCP_OAUTH_PORT) \
+		$(NIXUSER)@$(NIXADDR) $(SSH_CMD)
+
+vm/untunnel:
+	-ssh -S "$(TUNNEL).ctl" -O exit $(NIXUSER)@$(NIXADDR)
+	rm -f "$(TUNNEL).sock" "$(TUNNEL).ctl"
+
+# The Mac router: Caddy from Homebrew, run by launchd, on 127.0.0.1 and ::1 only.
+# It never listens on the network: a Host check doesn't stop LAN clients. (macOS
+# lets users bind port 80 only on 0.0.0.0, which is why this stays on PROXY_PORT.)
+# http://localhost:$(PROXY_PORT) lists the machines with a tunnel.
+ROUTER_LABEL = dev.dev-env.router
+ROUTER_PLIST = $(HOME)/Library/LaunchAgents/$(ROUTER_LABEL).plist
+define ROUTER_CADDYFILE
+# Written by `make mac/router`; changes here are overwritten.
+{
+	admin off
+	auto_https off
+	persist_config off
+}
+
+http://:$(PROXY_PORT) {
+	bind 127.0.0.1 [::1]
+
+	# <anything>.<machine>.localhost and <machine>.localhost -> that machine's tunnel.
+	@machine vars_regexp m {host} ^(?:[a-z0-9.-]+\.)?([a-z0-9]([a-z0-9-]*[a-z0-9])?)\.localhost$$
+	handle @machine {
+		reverse_proxy unix/$(ROUTER_DIR)/tunnels/{re.m.1}.sock
+	}
+
+	# Bare localhost: the machines with a tunnel.
+	@index host localhost
+	handle @index {
+		templates {
+			between [[ ]]
+			root $(ROUTER_DIR)/tunnels
+		}
+		header Content-Type "text/html; charset=utf-8"
+		respond `<!doctype html><meta charset=utf-8><title>dev-env</title><body style='font-family: sans-serif'><h1>Machines</h1><ul>[[range listFiles "/"]][[if hasSuffix ".sock" .]][[$$m := trimSuffix ".sock" .]]<li><a href="http://[[$$m]].localhost:$(PROXY_PORT)">[[$$m]]</a></li>[[end]][[end]]</ul><p>No machine listed? Run <code>make vm/ssh</code> for it.</p></body>`
+	}
+
+	handle {
+		respond "Unknown name" 404
+	}
+
+	handle_errors 502 {
+		respond "{host}: its machine isn't connected. Run `make vm/ssh` for it." 502
+	}
+}
+endef
+define ROUTER_PLIST_XML
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+	<key>Label</key><string>$(ROUTER_LABEL)</string>
+	<key>ProgramArguments</key><array>
+		<string>@CADDY@</string><string>run</string>
+		<string>--config</string><string>$(ROUTER_DIR)/router/Caddyfile</string>
+		<string>--adapter</string><string>caddyfile</string>
+	</array>
+	<key>EnvironmentVariables</key><dict><key>HOME</key><string>$(HOME)</string></dict>
+	<key>RunAtLoad</key><true/>
+	<key>KeepAlive</key><true/>
+	<key>StandardErrorPath</key><string>$(ROUTER_DIR)/router/router.log</string>
+</dict></plist>
+endef
+export ROUTER_CADDYFILE ROUTER_PLIST_XML
+
+mac/router:
+	@test "$$(uname)" = Darwin || { echo "mac/router runs on the Mac"; exit 1; }
+	@command -v caddy >/dev/null || brew install caddy
+	@mkdir -p "$(ROUTER_DIR)/router" "$(ROUTER_DIR)/tunnels" && chmod 700 "$(ROUTER_DIR)/tunnels"
+	@printf '%s\n' "$$ROUTER_CADDYFILE" > "$(ROUTER_DIR)/router/Caddyfile"
+	@caddy validate --config "$(ROUTER_DIR)/router/Caddyfile" --adapter caddyfile >/dev/null 2>&1 || \
+		{ caddy validate --config "$(ROUTER_DIR)/router/Caddyfile" --adapter caddyfile; exit 1; }
+	@mkdir -p "$$(dirname "$(ROUTER_PLIST)")"
+	@printf '%s\n' "$$ROUTER_PLIST_XML" | sed "s|@CADDY@|$$(command -v caddy)|" > "$(ROUTER_PLIST)"
+	-@launchctl bootout gui/$$(id -u)/$(ROUTER_LABEL) 2>/dev/null
+	@launchctl bootstrap gui/$$(id -u) "$(ROUTER_PLIST)"
+	@echo "Router running: http://localhost:$(PROXY_PORT). Reconnect with make vm/ssh."
+
+mac/router-remove:
+	-launchctl bootout gui/$$(id -u)/$(ROUTER_LABEL)
+	rm -f "$(ROUTER_PLIST)" "$(ROUTER_DIR)/router/Caddyfile"
 
 # Run inside the machine (VM or WSL), from this repo.
 switch:

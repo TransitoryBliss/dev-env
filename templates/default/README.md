@@ -45,10 +45,15 @@ The template's `vm` host is set up for it (`devEnv.platform = "utm"`).
 
 After changes: `make vm/bootstrap NIXADDR=<ip>`. Updates: `make vm/update NIXADDR=<ip>`.
 
-**Two VMs at once** (say, one for work and one personal): `make vm/ssh` forwards the proxy
-port and the MCP OAuth callback port to the Mac, so the second VM needs its own. Set
-`devEnv.proxy.port` and `devEnv.mcp.callbackPort` in its host file (e.g. 8091 and 19877), and
-the same values as `PROXY_PORT ?=` and `MCP_OAUTH_PORT ?=` in that repo's `Makefile.local`.
+**Web UIs from the Mac:** run `make mac/router` once. After that, `make vm/ssh` opens a
+background tunnel for the VM, and everything in it is at
+`http://<name>.<machine>.localhost:8090` (`<machine>` is the VM's hostname); `http://localhost:8090`
+lists the connected VMs. `make vm/untunnel` closes a VM's tunnel.
+
+**Two VMs at once** (say, one for work and one personal): with the router they share the
+proxy port. The MCP OAuth callback is a plain forwarded port, so the second VM needs its own:
+set `devEnv.mcp.callbackPort` in its host file (e.g. 19877) and the same value as
+`MCP_OAUTH_PORT ?=` in that repo's `Makefile.local`.
 
 ## Parallels VM on a Mac
 

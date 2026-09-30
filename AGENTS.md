@@ -335,9 +335,19 @@ commit its `flake.lock`.
   aarch64 kernels too (the initrd builds). `systemd-boot.consoleMode = "0"` avoids Fusion's
   EFI console-mode error. Added because UTM's Shared network (Apple's per-VM Internet
   Sharing) had no internet on an MDM-managed Mac with the firewall locked on.
-- **Makefile:** `vm/ssh` forwards `PROXY_PORT` (`devEnv.proxy.port`) and `MCP_OAUTH_PORT`
-  (`devEnv.mcp.callbackPort`); a second VM running at the same time sets both in its host file
-  and `Makefile.local` (read before the `?=` defaults). `HOST` defaults to the hostname on NixOS, and is only overridable from the
+- **Makefile:** `vm/ssh` forwards `MCP_OAUTH_PORT` (`devEnv.mcp.callbackPort`); a second VM
+  running at the same time sets its own in its host file and `Makefile.local` (read before the
+  `?=` defaults). The proxy: with the Mac router (`mac/router`: Caddy from Homebrew under
+  launchd, loopback only, config and plist written from `define` blocks, since the Mac has no
+  Nix), `vm/ssh` starts a background ssh master (`-f -N -M -S <tunnel>.ctl`,
+  `StreamLocalBindUnlink`, `ServerAliveInterval`) forwarding `~/.dev-env/tunnels/<MACHINE>.sock`
+  to the VM's proxy, reused via `-O check`; the router picks the socket from the host name
+  (`vars_regexp` on `{host}`, `unix/.../{re.m.1}.sock`). So every VM keeps the same
+  `PROXY_PORT`, and the URLs the VM prints work on the Mac. `MACHINE` defaults to `HOST` and
+  must match the VM's `devEnv.proxy.machineName`. Without the router it forwards `PROXY_PORT`
+  as before. The Mac ships GNU make 3.81: no `$(file ...)`, `.ONESHELL` or `--eval` in
+  recipes that run there. Tested on Linux with the same Caddy and a throwaway user sshd on
+  port 22222 plus an `ssh` wrapper on `PATH` (`-F` config), running the real recipes. `HOST` defaults to the hostname on NixOS, and is only overridable from the
   command line. zsh's `HOST` variable must not leak in.
 
 ## Open items

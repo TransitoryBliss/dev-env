@@ -173,7 +173,16 @@ For `gh`, run `gh auth login --git-protocol ssh --skip-ssh-key` once per account
   (`psm.wt-playground`), and names are remembered while their directory exists. Services on
   `0.0.0.0`, outside those directories, or on debug ports (9222, 9229) are never routed.
   `devproxy ls` lists the routes. Browsers resolve `*.localhost` to 127.0.0.1 by themselves,
-  so no DNS is needed. `make vm/ssh` forwards the one port.
+  so no DNS is needed.
+
+  **From the Mac:** run `make mac/router` once. It installs Caddy with Homebrew and runs it
+  under launchd on `127.0.0.1:8090` and `[::1]:8090` only (never the network: a Host check
+  doesn't stop LAN clients). It sends `*.<machine>.localhost` to that machine's tunnel,
+  `~/.dev-env/tunnels/<machine>.sock`, which `make vm/ssh` starts in the background and
+  reuses; it outlives the session, and `make vm/untunnel` closes it. Several VMs can then run
+  at once on the same proxy port, and `http://localhost:8090` lists the connected ones.
+  Without the router, `make vm/ssh` forwards the proxy port directly, as before. The Mac side
+  can't use port 80: macOS lets users bind low ports only on `0.0.0.0`.
 
   Caddy, run as a systemd user service (`devproxy`), is the only way in. It answers only the
   names it knows (no DNS rebinding), rejects requests whose `Origin` is another site or
