@@ -48,7 +48,14 @@ The template's README covers installing on each platform. For a filled-in privat
 | `modules/nixos/`     | User account, Nix settings, platforms (`vm.nix` shared by `utm.nix`, `parallels.nix` and `vmware.nix`, `wsl.nix`) |
 | `modules/home/`      | Languages, editor, git identities, agents                  |
 | `pkgs/`              | Packages not in nixpkgs (plannotator, pi-session-manager)  |
-| `templates/default/` | Starting point for a private config                        |
+| `templates/default/` | Starting point for a private config; its `dev-env.mk` is the shared Makefile |
+| `templates/sync-example.sh` | Renders the template into [dev-env-example](https://github.com/TransitoryBliss/dev-env-example) |
+
+The make targets (`vm/*`, `switch`, `agents/setup`, ...) live in `templates/default/dev-env.mk`.
+Each private config commits a copy of it, since `make vm/*` runs on a Mac without Nix, next to a
+short `Makefile` that sets `NIXUSER` and `VM_HOST` and includes it. `make vm/update
+INPUT=dev-env` updates the lock and that copy together (`make base/sync` inside a machine), and
+`make base/check` fails when the copy doesn't match the locked input.
 
 ## Options
 
@@ -301,8 +308,8 @@ For `gh`, run `gh auth login --git-protocol ssh --skip-ssh-key` once per account
   Instead, `agents/setup` installs them at the versions in `PI_PACKAGES`. Pinned packages
   don't trigger pi's "Package Updates Available" notice; upgrade by bumping a pin and
   re-running `make agents/setup`. Packages only one config wants go in an optional
-  `Makefile.local` (`PI_PACKAGES += name@version`), which the Makefile `-include`s, so the
-  Makefile itself stays the same as the template's.
+  `Makefile.local` (`PI_PACKAGES += name@version`), which `dev-env.mk` `-include`s, so
+  `dev-env.mk` itself stays the same as the base's.
 
 ### MCP servers and OAuth
 
@@ -345,4 +352,8 @@ ssh <user>@<vm-ip> herdr plugin action invoke annotate.capture
 
 `nix flake check` evaluates the template's two hosts (`example-vm` and `example-wsl`) against
 this checkout. To try changes on a real machine before publishing, build your private config
-against a local checkout: `make vm/bootstrap NIXADDR=<ip> DEV_ENV=../dev-env`.
+against a local checkout: `make vm/bootstrap NIXADDR=<ip> DEV_ENV=../dev-env`. With
+`DEV_ENV` set, `make base/sync` inside the machine copies `dev-env.mk` from that checkout.
+
+After changing the template, render it into a dev-env-example checkout and commit there:
+`templates/sync-example.sh ../dev-env-example` (`--check` only reports drift).

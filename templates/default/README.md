@@ -10,13 +10,15 @@ there; this repo holds only what's specific to me and my machines.
 | `hosts/*.nix`       | Per-machine: platform, hostname, language flags              |
 | `nvim/`             | Neovim config (lazy.nvim, LSP, treesitter), linked to `~/.config/nvim` |
 | `herdr/config.toml` | herdr config, linked to `~/.config/herdr/config.toml`        |
-| `Makefile`          | Install and rebuild helpers                                  |
+| `Makefile`          | Your values (`NIXUSER`, `VM_HOST`), then `include dev-env.mk` |
+| `dev-env.mk`        | Install and rebuild helpers: a copy of the base's, don't edit (see [Updating the base](#updating-the-base)) |
 | `Makefile.local`    | Optional, not included: your additions, e.g. `PI_PACKAGES += some-pi-package@1.2.3` |
 
 ## First steps
 
 1. Fill in `users/me.nix`. Rename it if you like, and update the imports in `flake.nix`.
-2. Set `NIXUSER ?=` in the `Makefile` to your username.
+2. Set `NIXUSER ?=` in the `Makefile` to your username, and `VM_HOST ?=` to the
+   `nixosConfigurations` entry `make` builds from the Mac by default.
 3. Keep the hosts you need in `hosts/` and `flake.nix`.
 
 ## UTM VM on a Mac
@@ -166,7 +168,7 @@ setting it only per host). After changing it: `make switch`, detach and reattach
 marked colour block at its end. What the private config needs, all already in this
 template:
 
-- `SSH_CMD ?= herdr-attach` in the `Makefile` (writes the palette to your terminal).
+- `SSH_CMD ?= herdr-attach` in `dev-env.mk` (writes the palette to your terminal).
 - `[theme] name = "terminal"` in `herdr/config.toml`.
 - `nvim/lua/plugins/colors.lua` loading the base's plugin, lualine on `theme = "auto"`, and
   no `vim.cmd.colorscheme(...)` anywhere else in the nvim config.
@@ -266,6 +268,26 @@ Every change is pulled, committed and pushed, so each machine sees the same list
 learn the command from the `notes` skill (pi and Claude Code); ask one to "note this idea"
 or "what's on my todo list". Different machines can point at different repos, e.g. a work
 machine at a work account's notes.
+
+## Updating the base
+
+`make vm/update NIXADDR=<ip> INPUT=dev-env` (from the Mac) moves the `dev-env` input to its
+latest commit, and copies back both `flake.lock` and `dev-env.mk`: the make targets live in the
+base, and the copy here is replaced by the one in the input you just locked. Commit both.
+Inside a machine, the same is `nix flake update dev-env && make base/sync`.
+
+`dev-env.mk` is a plain file in this repo, not read from the flake input, because `make vm/*`
+runs on the Mac, which has no Nix. Don't edit it: `make base/check` (also run by `make check`)
+fails when it differs from the locked input's copy. Your own variables and targets go in the
+`Makefile` (before the `include`) or in `Makefile.local` (`PI_PACKAGES +=`, `PROXY_PORT`,
+`MCP_OAUTH_PORT`, `SSH_CMD`, extra targets).
+
+**Configs from before `dev-env.mk`** had the whole thing in `Makefile`. To switch: update the
+input (`make vm/update NIXADDR=<ip> INPUT=dev-env` still works with the old Makefile), then,
+inside the machine, replace `Makefile` with the short one from the template (keep your
+`NIXUSER`, and set `VM_HOST` to what `HOST` defaulted to), run `make base/sync`, and commit
+`Makefile` and `dev-env.mk`. Move anything else you had changed in the old Makefile to
+`Makefile.local`.
 
 ## Developing the base
 
