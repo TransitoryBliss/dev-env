@@ -126,8 +126,29 @@ repo's own `.git/info/exclude` (so it never makes the worktree dirty or lands in
 submits it for review in plannotator. Once you approve, it implements the plan in the same
 worktree. When the worktree is removed, `.wt/` is first copied to
 `~/.local/state/wt/plans/<host>/<owner>/<repo>/<branch>-<time>/`. From one pi session you can
-ask the agent to plan several tasks in parallel; each waiting plan gets its own plannotator
-port (see below).
+ask the agent to plan several tasks in parallel; each waiting plan gets its own name through the
+proxy (`plan.<branch>.<machine>.localhost`) and a herdr notification with the link.
+
+**Tasks across repos:** a change that spans several repos of one org is a task:
+
+```sh
+cd ~/source/github.com/<owner>      # or any repo of that org
+wt task [-b] [--plan | --from-plan <file>] <name> <repo>... [-- <prompt>]
+```
+
+The repos are listed in the order their PRs must merge. Each gets a worktree on branch `<name>`
+(start it with the issue key, `mc-1234-…`, and Linear links every PR to the issue), in the usual
+place. The task itself lives in `~/.herdr/worktrees/<host>/<owner>/.tasks/<name>/`: `task.json`
+(repos and what each waits for), an `AGENTS.md` that tells the lead session about the repos and
+the merge order, links to the worktrees, and `plan.md` if it was planned. One herdr workspace
+holds the lead pi session (in the task folder) and a tab per repo. Running `wt task <name>` again
+with more repos adds them. `--plan` plans first (the plan goes to the task's `plan.md`);
+`--from-plan` hands over an approved plan, which a planning session in the org folder does with
+the `wt` tool's `task` action. `wt task status` shows each repo's PR, checks, and what it
+waits for, and says what to do next; later repos get draft PRs until the one before is merged.
+Merging stays on GitHub. `/wt done` (or `wt done`) in the lead session removes every worktree,
+branch and the task, if nothing is lost; the plan is saved first. While any pane is in a task,
+gc keeps all of its worktrees, merged ones too; once it's closed they go like any other.
 
 Every account gets its own SSH key, `~/.ssh/id_ed25519_<account>`. Git uses the default
 identity everywhere, except in repos whose remote, or path under `~/source`, matches an override.

@@ -7,6 +7,11 @@
  *   /wt ls                     every worktree and its state
  *   /wt [-b] [--plan] <branch> [prompt]
  *                              start a task in a new worktree (--plan: in plan mode)
+ *   /wt task [-b] [--plan | --from-plan <file>] <name> <repo>... [-- <prompt>]
+ *                              a task across repos of one org (see wt.zsh)
+ *   /wt task status | ls       the task's PRs and what each waits for; every task
+ *
+ * In a task's lead session, /wt done finishes the whole task.
  *
  * The agent gets a `wt` tool that can start tasks (always in the background) and list
  * worktrees, but not remove them: finishing or throwing away work stays with the user.
@@ -28,6 +33,15 @@ interface DoneCheck {
 	has_plan: boolean;
 }
 
+interface TaskCheck {
+	task: string;
+	dir: string;
+	safe: boolean;
+	closes_this: boolean;
+	has_plan: boolean;
+	repos: { name: string; dir: string; state: string; safe: boolean }[];
+}
+
 const home = process.env.HOME ?? "";
 const tilde = (p: string) => (home && p.startsWith(home) ? `~${p.slice(home.length)}` : p);
 const firstLine = (s: string) => s.trim().split("\n").pop() ?? "";
@@ -41,7 +55,9 @@ export default function (pi: ExtensionAPI) {
 			ctx.ui.notify(firstLine(check.stderr) || "wt done --check failed", "error");
 			return;
 		}
-		const s = JSON.parse(check.stdout) as DoneCheck;
+		const parsed = JSON.parse(check.stdout) as DoneCheck | TaskCheck;
+		if ("repos" in parsed) return doneTask(force, parsed, ctx);
+		const s = parsed;
 		const what = s.branch ? `branch ${s.branch}` : "detached HEAD";
 		if (!force && !s.safe) {
 			const why =
@@ -77,16 +93,78 @@ export default function (pi: ExtensionAPI) {
 		ctx.shutdown(); // this session's directory is gone either way
 	}
 
+	// /wt done in a task's lead session: every repo of the task, then the task.
+	async function doneTask(force: boolean, s: TaskCheck, ctx: ExtensionCommandContext) {
+		const unsafe = s.repos.filter((r) => !r.safe);
+		if (!force && unsafe.length) {
+			const list = unsafe.map((r) => `${r.name} (${r.state})`).join(", ");
+			ctx.ui.notify(`Not removing task ${s.task}: work would be lost in ${list}. /wt done -f throws it away.`, "warning");
+			return;
+		}
+		if (!ctx.hasUI) {
+			ctx.ui.notify("/wt done needs a UI to confirm", "error");
+			return;
+		}
+		const gone = s.repos.filter((r) => r.state !== "removed").map((r) => `${r.name}: ${tilde(r.dir)}`);
+		const lost = force && unsafe.length
+			? `\n\nThis THROWS AWAY work in ${unsafe.map((r) => `${r.name} (${r.state})`).join(", ")}.`
+			: "";
+		const plan = s.has_plan ? " The plan is saved to ~/.local/state/wt/plans/ first." : "";
+		const closes = s.closes_this ? " This closes the task's herdr workspace." : "";
+		const ok = await ctx.ui.confirm(
+			force ? `Throw task ${s.task} away?` : `Finish task ${s.task}?`,
+			`Remove these worktrees and their branch ${s.task}:\n${gone.join("\n") || "(none left)"}\n\n` +
+				`and the task folder.${plan}${closes} The session ends and stays in /resume.${lost}`,
+		);
+		if (!ok) return;
+		const r = await pi.exec("env", ["WT_DONE_DELAY=2", "wt", "task", "done", ...(force ? ["-f"] : []), s.task], {
+			cwd: ctx.cwd,
+			timeout: 180_000,
+		});
+		if (r.code !== 0) {
+			ctx.ui.notify(firstLine(r.stderr) || "wt task done failed", "error");
+			return;
+		}
+		ctx.ui.notify(`Removing task ${s.task}; ending the session`, "info");
+		ctx.shutdown();
+	}
+
+	// /wt task ...: split off "-- <prompt>" so the prompt stays one argument.
+	async function task(rest: string, ctx: ExtensionCommandContext) {
+		const words0 = rest.trim().split(/\s+/).filter(Boolean);
+		if (words0[0] === "done") {
+			await done(words0.includes("-f"), ctx);
+			return;
+		}
+		const i = rest.search(/(^|\s)--(\s|$)/);
+		const head = i < 0 ? rest : rest.slice(0, i);
+		const prompt = i < 0 ? "" : rest.slice(i).replace(/^\s*--\s*/, "").trim();
+		const words = head.trim().split(/\s+/).filter(Boolean);
+		const args = ["task", ...words, ...(prompt ? ["--", prompt] : [])];
+		const r = await wt(args, ctx.cwd, 180_000);
+		const out = (r.code === 0 ? r.stdout : r.stderr || r.stdout).trim();
+		if (words[0] === "status" || words[0] === "ls" || r.code !== 0) {
+			ctx.ui.notify(out || `wt task exited ${r.code}`, r.code === 0 ? "info" : "error");
+		} else if (out) ctx.ui.notify(out, "info");
+	}
+
 	pi.registerCommand("wt", {
-		description: "Worktrees: /wt done [-f], /wt ls, /wt [-b] [--plan] <branch> [prompt]",
+		description: "Worktrees: /wt done [-f], /wt ls, /wt [-b] [--plan] <branch> [prompt], /wt task ...",
 		getArgumentCompletions: (prefix) =>
 			[
 				{ value: "done", label: "done", description: "finish this worktree's task, if nothing is lost" },
 				{ value: "done -f", label: "done -f", description: "throw this task away, unmerged work too" },
 				{ value: "ls", label: "ls", description: "every worktree and its state" },
+				{ value: "task ", label: "task", description: "a task across repos: task <name> <repo>... -- <prompt>" },
+				{ value: "task status", label: "task status", description: "this task's PRs, checks and merge order" },
+				{ value: "task ls", label: "task ls", description: "every task" },
 			].filter((i) => i.value.startsWith(prefix.trim())),
 		handler: async (args, ctx) => {
 			const words = args.trim().split(/\s+/).filter(Boolean);
+			if (words[0] === "task") {
+				await task(args.trim().slice(4), ctx);
+				return;
+			}
 			if (words[0] === "done") {
 				const extra = words.slice(1).filter((w) => w !== "-f");
 				if (extra.length) {
@@ -126,16 +204,28 @@ export default function (pi: ExtensionAPI) {
 			"Start a task in its own git worktree, herdr workspace and pi session (runs in the background, " +
 			"off the repo's default branch), or list worktrees and their state. With plan: true the new " +
 			"session starts in plannotator's plan mode and writes a plan for the user to review before " +
-			"implementing. Cannot remove worktrees.",
-		promptSnippet: "wt: start parallel tasks in their own git worktree and pi session; list worktrees",
+			"implementing. Action task creates a task across several repos of one org (one branch name, " +
+			"a worktree per repo, one workspace with a lead pi session); status shows a task's PRs, checks " +
+			"and merge order. Cannot remove worktrees.",
+		promptSnippet: "wt: start parallel tasks in their own git worktree and pi session, or a task across repos; list worktrees",
 		promptGuidelines: [
 			"Use wt with action start to hand independent work to parallel agents: one short kebab-case branch per task, and a self-contained prompt (the new agent sees nothing of this conversation).",
 			"Set plan: true when the user wants a task planned (and reviewed) before it is implemented; the prompt must then say what to plan.",
+			"When an approved plan changes several repos of one org, the first step is wt with action task: branch is a short kebab-case task name (starting with the issue key if there is one), repos lists the repos in the order their PRs must merge, and planFile is the approved plan's path. Then stop: the task's own lead session implements it.",
+			"In a task (its folder has AGENTS.md and task.json), use wt with action status to see each repo's PR, checks and what it waits for.",
 			"Never try to remove or clean up worktrees; the user does that with /wt done, and merged ones are removed automatically.",
 		],
 		parameters: Type.Object({
-			action: StringEnum(["start", "list"] as const),
-			branch: Type.Optional(Type.String({ description: "New branch name (start)" })),
+			action: StringEnum(["start", "list", "task", "status"] as const),
+			branch: Type.Optional(
+				Type.String({ description: "New branch name (start), or task name (task; optional for status)" }),
+			),
+			repos: Type.Optional(
+				Type.Array(Type.String(), { description: "Repos of the current org, in merge order (task)" }),
+			),
+			planFile: Type.Optional(
+				Type.String({ description: "Approved plan (markdown) the task's lead implements (task)" }),
+			),
 			prompt: Type.Optional(Type.String({ description: "Prompt for the new agent (start)" })),
 			plan: Type.Optional(
 				Type.Boolean({ description: "Start the new agent in plan mode (start; needs a prompt)" }),
@@ -144,7 +234,19 @@ export default function (pi: ExtensionAPI) {
 		async execute(_id, params, signal, _onUpdate, ctx) {
 			let args: string[];
 			if (params.action === "list") args = ["ls"];
-			else {
+			else if (params.action === "status") args = ["task", "status", ...(params.branch ? [params.branch] : [])];
+			else if (params.action === "task") {
+				if (!params.branch) throw new Error("branch (the task name) is required for task");
+				args = [
+					"task",
+					"-b",
+					...(params.plan ? ["--plan"] : []),
+					...(params.planFile ? ["--from-plan", params.planFile] : []),
+					params.branch,
+					...(params.repos ?? []),
+					...(params.prompt ? ["--", params.prompt] : []),
+				];
+			} else {
 				if (!params.branch) throw new Error("branch is required for start");
 				args = ["-b", ...(params.plan ? ["--plan"] : []), params.branch, ...(params.prompt ? [params.prompt] : [])];
 			}
