@@ -86,6 +86,8 @@ Home level, under `devEnv.user.home`:
 | `devEnv.mcp.servers`                 | MCP servers for pi in every directory (`~/.config/mcp/mcp.json`) |
 | `devEnv.mcp.scopes."<host/owner>"`   | MCP servers for repos under one org or user; `inheritGlobal = false` hides the global ones |
 | `devEnv.mcp.callbackPort`            | Fixed OAuth callback port (default 19876), forwarded by `make vm/ssh` |
+| `devEnv.notes.repo`                  | Git repo for ideas and todos (`host/owner/repo`): installs `note`, `idea`, `todo` and a `notes` skill for pi and Claude Code; null (default) leaves them out |
+| `devEnv.notes.dir`                   | Its checkout (default `~/source/<repo>`); `note` clones it on first use |
 
 ## Git identities and repositories
 
@@ -199,6 +201,13 @@ For `gh`, run `gh auth login --git-protocol ssh --skip-ssh-key` once per account
   `X-Forwarded-For`, answers every origin with `Access-Control-Allow-Origin: *`, and creates
   the same fixed token on every install, which together let anyone who reaches it, or any web
   page, open a shell as you. Drop the patch once upstream fixes it.
+- **Notes** (`modules/home/notes/`): with `devEnv.notes.repo` set, ideas and todos live in that
+  repo as markdown files, `ideas/<date>-<slug>.md` and `todos/<date>-<slug>.md`, with
+  `status`, `created`, `tags` and `project` in the frontmatter. `note add`, `note ls`,
+  `note done` and friends (`note help`) pull first, commit only the files they touched and
+  push, under a lock, so several agents can use the same checkout at once. `idea "…"` and
+  `todo "…"` capture from the shell. The `notes` skill, linked into `~/.agents/skills` and
+  `~/.claude/skills`, tells agents to use `note`. `project` defaults to the repo you're in.
 - **The shell** is zsh with [Oh My Zsh](https://ohmyz.sh) (`robbyrussell` theme, `git` and
   `direnv` plugins), zsh-autosuggestions and zsh-syntax-highlighting. Up/Down search history
   by what's already typed, so `n` then Up cycles only commands starting with `n`. The keymap is

@@ -33,6 +33,10 @@
       # browser, at http://psm.<machine>.localhost:8090 (needs proxy.enable below).
       # home.devEnv.sessionManager.enable = true;
 
+      # Ideas and todos as markdown in a git repo of yours (create it first):
+      # `note`, `idea "…"`, `todo "…"`, and a skill so agents use them too.
+      # home.devEnv.notes.repo = "github.com/your-github-login/notes";
+
       # Secrets as environment variables (API keys for agent tools), from a
       # sops-encrypted file committed here. See the README's "Secrets".
       # home.devEnv.secrets = {

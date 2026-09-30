@@ -16,6 +16,7 @@ in
     ./git.nix
     (import ./languages.nix { inherit inputs; })
     ./mcp.nix
+    ./notes
     (import ./secrets.nix { inherit inputs; })
     ./session-manager.nix
     ./theme.nix

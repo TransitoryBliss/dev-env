@@ -248,6 +248,25 @@ rsync -a /tmp/sessions-restore/home/<you>/ ~/ && rm -rf /tmp/sessions-restore
 systemctl --user start restic-backups-agent-sessions.timer
 ```
 
+## Notes
+
+`home.devEnv.notes.repo = "github.com/<you>/notes"` keeps ideas and todos as markdown files
+in a git repo, and gives you and your agents one command for them. Create the repo first
+(private is fine), with `ideas/` and `todos/` directories; an `AGENTS.md` describing the
+format helps agents that edit files by hand. Then:
+
+```sh
+idea "Try a smaller model for commit messages"
+todo "Renew the certificate" -m "Expires in October." --tag infra
+note ls              # open items; -a for all, -H for the repo you're in
+note done renew
+```
+
+Every change is pulled, committed and pushed, so each machine sees the same list. Agents
+learn the command from the `notes` skill (pi and Claude Code); ask one to "note this idea"
+or "what's on my todo list". Different machines can point at different repos, e.g. a work
+machine at a work account's notes.
+
 ## Developing the base
 
 To try changes to a local checkout of dev-env before publishing them:

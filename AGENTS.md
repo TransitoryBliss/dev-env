@@ -44,6 +44,7 @@ it (see below).
 | `modules/home/session-manager.nix` | `devEnv.sessionManager`: PSM user service and pi extension. |
 | `modules/home/backup.nix` | `devEnv.backup`: opt-in restic backup of agent sessions, selected per session folder by recorded cwd (`agent-sessions-select`); also sets Claude Code's `cleanupPeriodDays`. Enables user lingering from `modules/nixos/default.nix`. |
 | `modules/home/secrets.nix` | `devEnv.secrets`: sops-nix, exports decrypted secrets from `.zshenv`, globally and per `host/owner` scope (re-checked on `cd`). |
+| `modules/home/notes/` | `devEnv.notes`: `note.sh` (the `note` CLI; the wrapper in `default.nix` bakes in `NOTES_DIR`/`NOTES_REPO`), `idea`/`todo` shorthands, and `skill/SKILL.md`, linked into `~/.agents/skills/notes` and `~/.claude/skills/notes`. |
 | `modules/home/mcp.nix` | `devEnv.mcp`: MCP servers for pi, global and per `host/owner` scope (via `ancestorConfigRoots` = the home directory, absolute since a bare `~` is rejected: per-scope roots make the adapter warn outside them), fixed OAuth callback port. |
 
 - **Unfree packages:** add names to `devEnv.unfreePackages`. Don't set
