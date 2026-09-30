@@ -64,7 +64,7 @@ System level, usually in `users/<you>.nix` and `hosts/<machine>.nix`:
 | `devEnv.configDir`       | Checkout of your private config in the machine (default `~/dev-env`) |
 | `devEnv.timeZone`        | Time zone (default `UTC`)                                          |
 | `devEnv.unfreePackages`  | Extra unfree packages to allow, by name                            |
-| `devEnv.proxy.enable`    | Local reverse proxy for web UIs, at `http://<name>.localhost:8090` |
+| `devEnv.proxy.enable`    | Local reverse proxy for web UIs, at `http://<name>.<machine>.localhost:8090` |
 | `devEnv.proxy.services`  | Extra services to route, as `{ name = localhostPort; }`            |
 
 Home level, under `devEnv.user.home`:
@@ -152,24 +152,40 @@ For `gh`, run `gh auth login --git-protocol ssh --skip-ssh-key` once per account
 - **herdr** comes from its own flake, pinned by tag in `flake.nix`.
 - **plannotator** is a prebuilt release per architecture, in `pkgs/plannotator.nix`. Bump
   `version` and both hashes to update. There's no browser in the machine, so it serves its UI
-  on `127.0.0.1`, ports `19432`–`19439` (`devEnv.plannotator.firstPort`/`portCount`): each
-  plan or review waiting for a decision holds one, so parallel plans don't collide. It runs in
-  local mode, forced with `PLANNOTATOR_REMOTE=0` (remote mode binds `0.0.0.0`). Open the
-  first port at `http://plannotator.localhost:8090` and any port at
-  `http://plannotator-<port>.localhost:8090` through `devEnv.proxy`. The URL it prints says
-  `localhost:<port>`, because local mode ignores `PLANNOTATOR_URL_HOST`: take the port from it.
-- **The local proxy** (`devEnv.proxy`) is Caddy on `127.0.0.1:8090`, routing by hostname:
-  `http://psm.localhost:8090`, `plannotator.localhost` (and `plannotator-<port>.localhost`),
-  `md.localhost`. Browsers resolve `*.localhost` to 127.0.0.1 by
-  themselves, so no DNS is needed. `make vm/ssh` forwards that one port. Caddy only answers
-  hostnames it knows (no DNS rebinding), rejects requests whose `Origin` is another site,
-  including WebSocket upgrades, and strips the backends' CORS headers. On the Mac VMs (UTM,
-  Parallels) the firewall is on with only SSH open, so this and the tunnel are the ways in.
+  on `127.0.0.1`, on a random port, in local mode (forced with `PLANNOTATOR_REMOTE=0`: remote
+  mode binds `0.0.0.0`). The proxy finds each review page by itself and serves it at
+  `http://plan.<branch or repo>.<machine>.localhost:8090`; a herdr notification carries the
+  link. The `localhost:<port>` URL plannotator prints only works inside the machine.
+- **The local proxy** (`devEnv.proxy`) gives every web UI in the machine a name:
+
+  ```
+  http://<machine>.localhost:8090               index of everything running
+  http://psm.<machine>.localhost:8090           fixed names: psm, md, devEnv.proxy.services
+  http://<repo>.<machine>.localhost:8090        a dev server in a main checkout
+  http://<branch>.<machine>.localhost:8090      a dev server in a worktree
+  http://plan.<branch>.<machine>.localhost:8090 a plan waiting for review
+  ```
+
+  `<machine>` is `devEnv.proxy.machineName` (default: the hostname). Nothing needs
+  registering: a watcher (`devproxy-watch`) routes any service that listens on loopback,
+  belongs to you and runs under `~/source` or a worktree, plus plannotator's pages, and names
+  it after where it runs. The repo is added only when a name is taken
+  (`psm.wt-playground`), and names are remembered while their directory exists. Services on
+  `0.0.0.0`, outside those directories, or on debug ports (9222, 9229) are never routed.
+  `devproxy ls` lists the routes. Browsers resolve `*.localhost` to 127.0.0.1 by themselves,
+  so no DNS is needed. `make vm/ssh` forwards the one port.
+
+  Caddy, run as a systemd user service (`devproxy`), is the only way in. It answers only the
+  names it knows (no DNS rebinding), rejects requests whose `Origin` is another site or
+  another service (WebSocket upgrades included), sets its own `X-Forwarded-For` and strips
+  the backends' CORS headers. Its admin API is a Unix socket in `$XDG_RUNTIME_DIR`, not TCP.
+  Old names (`psm.localhost`) redirect to the new ones. On the Mac VMs (UTM, Parallels) the
+  firewall is on with only SSH open, so this and the tunnel are the ways in.
 - **Pi Session Manager** ([Dwsy/pi-session-manager](https://github.com/Dwsy/pi-session-manager))
   is built from source in `pkgs/pi-session-manager/`: the headless `pi-session-cli` with its
   web UI embedded, no desktop app. `devEnv.sessionManager.enable` runs it as a systemd user
   service on `127.0.0.1:52131`, links its pi extension (psm-bridge, `/psm` and `/kanban`) into
-  `~/.pi/agent/extensions`, and with `devEnv.proxy` serves it at `http://psm.localhost:8090`.
+  `~/.pi/agent/extensions`, and with `devEnv.proxy` serves it at `http://psm.<machine>.localhost:8090`.
   The package carries `security.patch`: upstream 0.8.6 trusts a client-supplied
   `X-Forwarded-For`, answers every origin with `Access-Control-Allow-Origin: *`, and creates
   the same fixed token on every install, which together let anyone who reaches it, or any web
@@ -215,7 +231,7 @@ For `gh`, run `gh auth login --git-protocol ssh --skip-ssh-key` once per account
   palettes; `themes/nvim/check.sh` loads each one in headless nvim.
 - **Markdown preview:** `md [file|dir]` runs [go-grip](https://github.com/chrishrb/go-grip)
   on `127.0.0.1:6419` (GitHub styling, mermaid, live reload) and prints the URL. Through
-  `devEnv.proxy` it's at `http://md.localhost:8090`. On WSL it opens in the Windows browser by itself, through a small
+  `devEnv.proxy` it's at `http://md.<machine>.localhost:8090`. On WSL it opens in the Windows browser by itself, through a small
   `xdg-open` that hands URLs to Windows. The same helper opens `claude` and `gh` login links.
   `glow file.md` renders markdown in the terminal instead.
 - Some add-ons install through their own tooling, via the template's `make agents/setup`:

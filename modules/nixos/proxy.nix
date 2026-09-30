@@ -1,37 +1,38 @@
-# Local reverse proxy: one localhost port, one hostname per service
-# (http://<name>.localhost:<port>). Reach it through an SSH tunnel for that one
-# port (`make vm/ssh`), or directly from Windows on WSL. Browsers resolve
-# *.localhost to 127.0.0.1 by themselves, so no DNS is needed.
+# Local reverse proxy: one localhost port, one name per web UI in the machine.
 #
-# Besides routing, Caddy guards the backends: it only answers the hostnames it
-# knows (no DNS rebinding), rejects requests whose Origin is another site
-# (browser drive-by requests, including WebSocket upgrades), sets its own
-# X-Forwarded-For, and strips CORS headers the backends send.
-{ config, lib, ... }:
+#   http://<machine>.localhost:<port>          index of everything running
+#   http://<name>.<machine>.localhost:<port>   one service
+#
+# Reach it through an SSH tunnel for that one port (`make vm/ssh`), or directly from
+# Windows on WSL. Browsers resolve *.localhost to 127.0.0.1 by themselves.
+#
+# Caddy runs as a systemd user service (`devproxy`), so routes change without root.
+# `devproxy-watch` (devproxy.py) finds services by itself and names them after where
+# they run; `services` below adds fixed names. Caddy guards every backend: it only
+# answers the names it knows (no DNS rebinding), rejects requests whose Origin is
+# another site (browser drive-by requests, including WebSocket upgrades), sets its
+# own X-Forwarded-For, and strips CORS headers the backends send. Its admin API is
+# a Unix socket in $XDG_RUNTIME_DIR, not TCP port 2019.
+{ config, lib, pkgs, ... }:
 
 let
   cfg = config.devEnv.proxy;
-  hm = config.home-manager.users.${config.devEnv.user.name};
+  user = config.devEnv.user.name;
+  hm = config.home-manager.users.${user};
 
-  vhost = name: backendPort:
-    let origin = "http://${name}.localhost:${toString cfg.port}";
-    in {
-      name = origin;
-      value = {
-        listenAddresses = [ "127.0.0.1" "::1" ];
-        extraConfig = ''
-          @foreign {
-            header Origin *
-            not header Origin ${origin}
-          }
-          respond @foreign "Forbidden origin" 403
+  settings = pkgs.writeText "devproxy.json" (builtins.toJSON {
+    machine = cfg.machineName;
+    inherit (cfg) port services;
+    scopeRoots = hm.devEnv.scopeRoots;
+    # Never routed: pi's MCP OAuth callback, Chrome DevTools, the Node inspector.
+    excludePorts = [ hm.devEnv.mcp.callbackPort 9222 9229 ];
+  });
 
-          reverse_proxy 127.0.0.1:${toString backendPort} {
-            header_down -Access-Control-Allow-Origin
-          }
-        '';
-      };
-    };
+  devproxy = pkgs.writeScriptBin "devproxy" ''
+    #!${pkgs.python3}/bin/python3
+    DEFAULT_CONFIG = "${settings}"
+    ${builtins.readFile ./devproxy.py}
+  '';
 in
 {
   options.devEnv.proxy = {
@@ -41,34 +42,62 @@ in
       default = 8090;
       description = "Localhost port the proxy listens on. Forward this one port to reach every service.";
     };
+    machineName = lib.mkOption {
+      type = lib.types.strMatching "[a-z0-9]([a-z0-9-]*[a-z0-9])?";
+      default = lib.toLower config.networking.hostName;
+      defaultText = lib.literalExpression "lib.toLower config.networking.hostName";
+      description = "Middle part of every name: http://<name>.<machineName>.localhost:<port>.";
+    };
     services = lib.mkOption {
       type = lib.types.attrsOf lib.types.port;
       default = { };
       example = { grafana = 3000; };
-      description = "Services to route, as hostname prefix -> localhost port: `psm` becomes http://psm.localhost:<port>.";
+      description = ''
+        Fixed names, as name -> localhost port: `psm` becomes
+        http://psm.<machineName>.localhost:<port>. Everything else is found and named
+        by devproxy-watch.
+      '';
     };
   };
 
   config = lib.mkIf cfg.enable {
     devEnv.proxy.services = {
       psm = lib.mkIf hm.devEnv.sessionManager.enable hm.devEnv.sessionManager.port;
-      # Fixed ports set in modules/home/agents.nix and editor.nix.
-      plannotator = lib.mkDefault hm.devEnv.plannotator.firstPort;
+      # Fixed port set in modules/home/editor.nix.
       md = lib.mkDefault 6419;
-    }
-    # plannotator uses a port range (parallel plans); each port gets its own name,
-    # matching the port in the URL plannotator prints.
-    // lib.listToAttrs (map (p: lib.nameValuePair "plannotator-${toString p}" (lib.mkDefault p))
-      (lib.range hm.devEnv.plannotator.firstPort
-        (hm.devEnv.plannotator.firstPort + hm.devEnv.plannotator.portCount - 1)));
+    };
 
-    services.caddy = {
-      enable = true;
-      # Plain HTTP only: *.localhost is already a secure context in browsers.
-      globalConfig = ''
-        auto_https off
-      '';
-      virtualHosts = lib.mapAttrs' vhost cfg.services;
+    home-manager.users.${user} = {
+      home.packages = [ devproxy ];
+
+      systemd.user.services.devproxy = {
+        Unit.Description = "Local reverse proxy for web UIs (Caddy)";
+        Service = {
+          ExecStartPre = "${devproxy}/bin/devproxy config %t/devproxy/caddy.json";
+          ExecStart = "${pkgs.caddy}/bin/caddy run --config %t/devproxy/caddy.json";
+          Restart = "on-failure";
+          RestartSec = 2;
+          RuntimeDirectory = "devproxy";
+          RuntimeDirectoryPreserve = "yes";
+        };
+        Install.WantedBy = [ "default.target" ];
+      };
+
+      systemd.user.services.devproxy-watch = {
+        Unit = {
+          Description = "Name and route the web UIs running in this machine";
+          BindsTo = [ "devproxy.service" ];
+          After = [ "devproxy.service" ];
+        };
+        Service = {
+          ExecStart = "${devproxy}/bin/devproxy watch";
+          Restart = "always";
+          RestartSec = 2;
+          # git to name things after repos and branches; herdr for notifications.
+          Environment = "PATH=${lib.makeBinPath [ pkgs.git ]}:/etc/profiles/per-user/${user}/bin";
+        };
+        Install.WantedBy = [ "default.target" ];
+      };
     };
   };
 }

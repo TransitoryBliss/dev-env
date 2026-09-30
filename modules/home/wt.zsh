@@ -309,8 +309,46 @@ _wt_keep() { [[ -n $auto ]] || print -r -- "keep    $1" }
 # wt gc [-n] [--auto]. --auto is for unattended runs (timer, herdr hook): it skips
 # instead of waiting when another gc runs, spares the workspace you're looking at,
 # only prints removals, and shows a herdr notification for them.
+# One scan-and-remove pass of _wt_gc. Reads dry, auto and removed from _wt_gc
+# (dynamic scoping). Returns 1, removing nothing, if herdr doesn't answer.
+_wt_gc_pass() {
+  local focused d main branch state wsid age name why
+  # Open workspaces are what protect a started task. If herdr doesn't answer, every
+  # worktree would look closed, so remove nothing. Asked each pass: a pass that
+  # follows a close event must see that workspace as closed.
+  if ! (( $+commands[herdr] )) || ! focused=$(herdr workspace list 2>/dev/null |
+    jq -er '[.result.workspaces[] | select(.focused) | .workspace_id] | join(" ")'); then
+    print -u2 "wt: herdr isn't answering, so there's no telling which worktrees are open; removing nothing"
+    return 1
+  fi
+  _wt_scan | while IFS=$_WT_SEP read -r d main branch state wsid age; do
+    name=${d#$_WT_ROOT/}
+    case $state in
+      merged) why='PR merged' ;;
+      in-base)
+        # An open one with no commits is usually a task that has just started.
+        [[ -z $wsid ]] || { _wt_keep "$name: no commits yet, but open"; continue }
+        why='no commits beyond the default branch' ;;
+      *) _wt_keep "$name: $state"; continue ;;
+    esac
+    if [[ -n $wsid && $wsid == $HERDR_WORKSPACE_ID ]]; then
+      _wt_keep "$name: you're in it, use wt done"; continue
+    fi
+    if [[ -n $auto && -n $wsid && " $focused " == *" $wsid "* ]]; then
+      continue # on screen right now; the next run gets it
+    fi
+    if [[ -n $dry ]]; then
+      print -r -- "remove  $name ($why)"
+    elif _wt_remove "$d" "$main" "$branch" "$wsid" "" </dev/null; then
+      removed+=($name)
+      print -r -- "removed $name ($why)"
+    fi
+  done
+  return 0
+}
+
 _wt_gc() {
-  local dry auto wait=120 lock lockfd focused d main branch state wsid age name why s=s
+  local dry auto wait=120 lock lockfd again rc=0 s=s
   local -a removed
   while (( $# )); do
     case $1 in
@@ -320,50 +358,36 @@ _wt_gc() {
     esac
     shift
   done
-  # Open workspaces are what protect a started task. If herdr doesn't answer, every
-  # worktree would look closed, so remove nothing.
-  if ! (( $+commands[herdr] )) || ! focused=$(herdr workspace list 2>/dev/null |
-    jq -er '[.result.workspaces[] | select(.focused) | .workspace_id] | join(" ")'); then
-    print -u2 "wt: herdr isn't answering, so there's no telling which worktrees are open; removing nothing"
-    [[ -n $auto ]] && return 0 || return 1
-  fi
-  # One gc at a time: the hook fires again for every workspace a gc closes.
+  # One gc at a time: the hook fires again for every workspace a gc closes, and
+  # several close events can arrive within milliseconds.
   zmodload zsh/system || return 1
   lock=${XDG_STATE_HOME:-$HOME/.local/state}/wt-gc.lock
+  again=$lock.again
   mkdir -p "${lock:h}" && : >>"$lock" # zsystem flock doesn't create the file
   if ! zsystem flock -t $wait -f lockfd "$lock" 2>/dev/null; then
-    [[ -n $auto ]] && return 0
+    # The running gc may have scanned before our event: ask it for another pass
+    # instead of dropping the event.
+    [[ -n $auto ]] && { : >>"$again"; return 0 }
     print -u2 "wt: another wt gc is still running"; return 1
   fi
-  {
-    _wt_scan | while IFS=$_WT_SEP read -r d main branch state wsid age; do
-      name=${d#$_WT_ROOT/}
-      case $state in
-        merged) why='PR merged' ;;
-        in-base)
-          # An open one with no commits is usually a task that has just started.
-          [[ -z $wsid ]] || { _wt_keep "$name: no commits yet, but open"; continue }
-          why='no commits beyond the default branch' ;;
-        *) _wt_keep "$name: $state"; continue ;;
-      esac
-      if [[ -n $wsid && $wsid == $HERDR_WORKSPACE_ID ]]; then
-        _wt_keep "$name: you're in it, use wt done"; continue
-      fi
-      if [[ -n $auto && -n $wsid && " $focused " == *" $wsid "* ]]; then
-        continue # on screen right now; the next run gets it
-      fi
-      if [[ -n $dry ]]; then
-        print -r -- "remove  $name ($why)"
-      elif _wt_remove "$d" "$main" "$branch" "$wsid" "" </dev/null; then
-        removed+=($name)
-        print -r -- "removed $name ($why)"
-      fi
-    done
-    if [[ -n $auto ]] && (( $#removed )); then
-      (( $#removed == 1 )) && s=
-      herdr notification show "wt: removed $#removed worktree$s" --body "${(j:, :)removed}" >/dev/null 2>&1
-    fi
-  } always {
-    zsystem flock -u $lockfd
-  }
+  while :; do
+    {
+      while :; do
+        rm -f "$again"
+        _wt_gc_pass || { rc=1; break }
+        [[ -e $again ]] || break
+      done
+    } always {
+      zsystem flock -u $lockfd
+    }
+    # A request that came in between the last check and the unlock. If someone else
+    # holds the lock by now, it's theirs to handle.
+    [[ $rc == 0 && -e $again ]] && zsystem flock -t 0 -f lockfd "$lock" 2>/dev/null || break
+  done
+  if [[ -n $auto ]] && (( $#removed )); then
+    (( $#removed == 1 )) && s=
+    herdr notification show "wt: removed $#removed worktree$s" --body "${(j:, :)removed}" >/dev/null 2>&1
+  fi
+  # Unattended runs never fail loudly (systemd, the hook); a manual one says so.
+  [[ -n $auto ]] && return 0 || return $rc
 }

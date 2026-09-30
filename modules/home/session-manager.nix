@@ -1,7 +1,7 @@
 # Pi Session Manager: a headless server with a web UI for browsing, searching
 # and resuming agent sessions, plus its pi extension (psm-bridge). Off by
 # default. The server listens on localhost only; reach it in a browser through
-# devEnv.proxy (http://psm.localhost:<port>).
+# devEnv.proxy (http://psm.<machine>.localhost:<port>).
 { config, lib, pkgs, ... }:
 
 let

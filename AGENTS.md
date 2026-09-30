@@ -39,7 +39,8 @@ it (see below).
 | `modules/home/wt-pi.ts` | pi extension: `/wt done [-f]`, `/wt ls`, `/wt <branch>`, and a start/list-only `wt` tool. Linked to `~/.pi/agent/extensions/wt.ts` by `git.nix`. |
 | `pkgs/plannotator.nix` | Prebuilt binary per architecture. |
 | `pkgs/pi-session-manager/` | Built from source, with our `Cargo.lock` and `security.patch`. |
-| `modules/nixos/proxy.nix` | `devEnv.proxy`: Caddy on one localhost port, a `<name>.localhost` vhost per service. |
+| `modules/nixos/proxy.nix` | `devEnv.proxy`: Caddy as a systemd user service (`devproxy`) on one localhost port, plus `devproxy-watch`, which routes services it finds as `<name>.<machine>.localhost`. |
+| `modules/nixos/devproxy.py` | The watcher and `devproxy` CLI: discovery, naming, Caddy's whole config, pushed over the admin Unix socket. |
 | `modules/home/session-manager.nix` | `devEnv.sessionManager`: PSM user service and pi extension. |
 | `modules/home/backup.nix` | `devEnv.backup`: opt-in restic backup of agent sessions, selected per session folder by recorded cwd (`agent-sessions-select`); also sets Claude Code's `cleanupPeriodDays`. Enables user lingering from `modules/nixos/default.nix`. |
 | `modules/home/secrets.nix` | `devEnv.secrets`: sops-nix, exports decrypted secrets from `.zshenv`, globally and per `host/owner` scope (re-checked on `cd`). |
@@ -195,15 +196,38 @@ commit its `flake.lock`.
 - **devEnv.proxy** reads `devEnv.sessionManager` from the user's home-manager config to route
   `psm` by itself. Its checks (`Origin`, known hosts) are the reason the tunnel is safe, so
   keep them when adding services. The Mac VMs' firewall (`vm.nix`) is back on for the same reason.
-  It also routes `md` (6419, fixed in `editor.nix`) and plannotator, whose ports come from
-  `devEnv.plannotator` in `agents.nix`: `PLANNOTATOR_PORT` is a range (default 19432-19439,
-  one port per plan or review waiting for a decision, so parallel `wt --plan` sessions don't
-  fail with "Port … in use"), routed as `plannotator` (first port) and
-  `plannotator-<port>` (every port). The proxy reads the range from the user's home-manager
-  config. The standalone `plannotator` binary (herdr-annotate) parses ranges too.
+  `md` (6419, fixed in `editor.nix`) is the other fixed name; everything else is found by
+  `devproxy-watch` (`devproxy.py`). The threat model is web pages in the browser and other
+  machines, not other processes in the VM (they reach loopback anyway). What keeps it safe:
+  backends on loopback only, Caddy as the one guarded door, one forwarded port.
+  - **Caddy is a user service** so the watcher can change routes without root. Its admin API
+    is `unix/$XDG_RUNTIME_DIR/devproxy/admin.sock` with `persist: false`; never TCP 2019,
+    which any local web page's process could reach. `devproxy config` writes the starting
+    config (fixed names only) in `ExecStartPre`; the watcher `POST /load`s the whole config.
+    `devproxy-watch` has `BindsTo=devproxy`, so a Caddy restart restarts it and it re-pushes.
+  - **Origin check:** same host, any port (`^https?://<host>(:[0-9]+)?$`): the Mac side may
+    reach Caddy through another port. Another service's host counts as foreign. Unknown
+    hosts get a 404 (the old Caddyfile answered an empty 200).
+  - **Discovery** reads `/proc/net/tcp{,6}` for LISTEN sockets of this uid on `127.0.0.1` /
+    `::1` only, maps inodes to pids through `/proc/*/fd` (only when the socket set changes),
+    and routes a listener if its cwd is under `devEnv.scopeRoots`. `pi` and `plannotator`
+    listeners are routed only if `GET /` has `<title>Plannotator` (retried for 15 s while the
+    server starts); pi's other listeners (the MCP OAuth callback, excluded outright) never
+    are. Ports < 1024, fixed ports, 9222 and 9229 are skipped.
+  - **Names:** main checkout → repo, worktree → branch, `plan.` for plannotator, `-2` for a
+    second listener of the same program, `<prog>.` for another program in the same place;
+    the repo is appended only for the newcomer when a name is taken. `~/.local/state/devproxy/names.json`
+    keeps them while the directory exists. `devproxy ls` reads `$XDG_RUNTIME_DIR/devproxy/routes.json`.
+  - **Static bodies** (the index page) go through Caddy's placeholder replacer: `{` and `}`
+    in names or paths are written as entities.
+  - **macOS can't give the Mac side port 80:** since Mojave a user may bind low ports only on
+    `0.0.0.0`, and `127.0.0.1:80` still needs root (Apple: intended). A router on `0.0.0.0`
+    would put every backend on the LAN, and a Host allowlist doesn't stop LAN clients. So
+    both sides stay on `devEnv.proxy.port`.
   Plannotator must stay in local mode (`PLANNOTATOR_REMOTE=0`): it detects SSH sessions and
-  switches to remote mode by itself, which binds `0.0.0.0`. Local mode ignores
-  `PLANNOTATOR_URL_HOST`, so its printed link says `localhost:<port>`.
+  switches to remote mode by itself, which binds `0.0.0.0`. With no `PLANNOTATOR_PORT` it
+  picks a random loopback port; the watcher routes it and sends a herdr notification. Its
+  printed `localhost:<port>` link only works inside the machine.
 - **herdr:** plugin commands (`herdr plugin list/install`) need a running server; the
   template's `agents/setup` starts `herdr server` in the background. Known conflict:
   herdr-annotate's suggested `prefix+o` clashes with herdr's own default for notifications.
@@ -265,8 +289,12 @@ commit its `flake.lock`.
   `~/.local/share/wt/herdr-plugin/` by an activation script that then runs `herdr plugin link`
   (idempotent, needs no running server); a store symlink would pin a path the next rebuild
   replaces. `--auto` refuses to remove anything if `herdr workspace list` fails (every worktree
-  would look closed), skips the focused workspace, and takes a non-blocking lock
-  (`~/.local/state/wt-gc.lock`) because each workspace a gc closes fires the hook again.
+  would look closed; asked again each pass), skips the focused workspace, and takes a
+  non-blocking lock (`~/.local/state/wt-gc.lock`) because each workspace a gc closes fires
+  the hook again. A run that finds the lock taken touches `wt-gc.lock.again` instead of
+  giving up: several close events arrive within milliseconds, and the running gc may have
+  scanned before the last workspace closed (that lost worktrees before). The lock holder
+  repeats its pass while the marker reappears, and checks once more after unlocking.
   `zsystem flock` doesn't create the lock file, so it's touched first. Fetches run with
   `GIT_TERMINAL_PROMPT=0` and ssh `BatchMode`: no terminal, maybe no agent; a failed fetch only
   makes it keep more. Hook output is in `herdr plugin log list --plugin dev-env.wt`.

@@ -30,7 +30,7 @@
       # home.devEnv.theme.background = "#211535";
 
       # Pi Session Manager: browse, search and resume agent sessions in a
-      # browser, at http://psm.localhost:8090 (needs proxy.enable below).
+      # browser, at http://psm.<machine>.localhost:8090 (needs proxy.enable below).
       # home.devEnv.sessionManager.enable = true;
 
       # Secrets as environment variables (API keys for agent tools), from a

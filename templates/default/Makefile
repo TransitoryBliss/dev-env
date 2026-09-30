@@ -120,8 +120,8 @@ endif
 # SSH in and attach to herdr (or start it), forwarding devEnv.proxy to the Mac.
 # herdr-attach (the base's theme.nix) first writes devEnv.theme's palette to the
 # Mac's terminal, and resets it on detach; without a theme it's plain herdr.
-# Every browser UI in the machine is at http://<name>.localhost:$(PROXY_PORT) (psm,
-# plannotator, md). `make vm/ssh SSH_CMD=` gives a plain shell instead.
+# Every browser UI in the machine is at http://<name>.<machine>.localhost:$(PROXY_PORT),
+# listed at http://<machine>.localhost:$(PROXY_PORT). `make vm/ssh SSH_CMD=` gives a plain shell instead.
 # LogLevel=ERROR keeps refused forwards (a stale tab retrying) from flooding
 # the terminal. -t because ssh allocates no terminal when given a command.
 # PROXY_PORT is devEnv.proxy.port, and MCP_OAUTH_PORT is devEnv.mcp.callbackPort,
