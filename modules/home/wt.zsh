@@ -52,13 +52,16 @@ wt gc [-n]                 remove merged ones, and closed ones with no new commi
                            -n: only say what would go. Also runs by itself, hourly
                            and whenever a herdr workspace closes.
 
-wt task [-b] [--plan | --from-plan <file>] <name> <repo>... [-- <prompt>]
+wt task [-b] [--plan | --from-plan <file>] [--hold <repo>]... <name> <repo>... [-- <prompt>]
                            in an org folder (or a repo) under ~/source: one task across
                            repos of that org, listed in the order their PRs merge. Each
-                           gets a worktree on branch <name>; one herdr workspace holds a
-                           lead pi session (in the task folder) and a tab per repo.
-                           Again with more repos: adds them. --from-plan: the approved
-                           plan the lead implements.
+                           gets a worktree on branch <name>. One herdr workspace holds the
+                           owner (the pi session that ran this, moved in as the first tab;
+                           from a shell, a new pi) and a tab per repo. With a plan
+                           (--from-plan), each repo tab gets its own agent, except --hold
+                           ones. Again with more repos: adds them.
+wt task start [--task <name>] <repo>...
+                           start the agents of held repos
 wt task status [name]      each repo's PR, checks, and what it waits for (also: wt status)
 wt task done [-f] [name]   remove every worktree, branch and the task, if nothing is lost
 wt task ls                 every task
@@ -289,9 +292,9 @@ _wt_new() {
 # delays a detached removal by that many seconds, so whatever runs in the closing
 # workspace (pi) can exit first.
 _wt_done() {
-  # In a task's own folder (where its lead session runs), done means the whole task.
+  # In a task's owner session, or its folder, done means the whole task.
   local td
-  if td=$(_wt_task_find) && [[ ${PWD:A} == ${td:A} || ${PWD:A} == ${td:A}/* ]]; then
+  if td=$(_wt_task_find) && { _wt_task_owned $td || [[ ${PWD:A} == ${td:A} || ${PWD:A} == ${td:A}/* ]] }; then
     _wt_task_done "$@"; return
   fi
   local force check dir main branch base state wsid log
@@ -491,6 +494,12 @@ _wt_task_find() {
     (( $#hits > 1 )) && print -u2 "wt: several orgs have a task called $name; run it in the org folder"
     return 1
   fi
+  # The task this pi session owns comes first: its cwd is often the org folder.
+  if [[ -n $WT_OWNER_SESSION ]]; then
+    for t in $_WT_ROOT/*/*/.tasks/*/task.json(N.); do
+      _wt_task_owned ${t:h} && { print -r -- ${t:h}; return 0 }
+    done
+  fi
   for t in $_WT_ROOT/*/*/.tasks/*/task.json(N.); do
     [[ $here == ${t:h:A} || $here == ${t:h:A}/* ]] && { print -r -- ${t:h}; return 0 }
     for r in ${(f)"$(jq -r '.repos[].dir' $t 2>/dev/null)"}; do
@@ -520,7 +529,8 @@ _wt_task_workspaces() {
 _wt_task_open() {
   local -a fresh=($1/task.json(Nmm-2))
   (( $#fresh )) && return 0
-  [[ -n $(_wt_task_workspaces $1) ]]
+  [[ -n $(_wt_task_workspaces $1) ]] && return 0
+  _wt_task_owner_pane $1 >/dev/null  # its owner's pi is still running somewhere
 }
 
 # Copies task folder $1 (without its links) to ~/.local/state/wt/plans/<host>/<owner>/
@@ -556,6 +566,7 @@ _wt_task() {
     status) shift; _wt_task_status "$@" ;;
     done) shift; _wt_task_done "$@" ;;
     ls) shift; _wt_task_ls "$@" ;;
+    start) shift; _wt_task_start "$@" ;;
     '' | -h | --help) _wt_usage ;;
     *) _wt_task_new "$@" ;;
   esac
@@ -563,18 +574,20 @@ _wt_task() {
 
 _wt_task_new() {
   local focus=--focus plan from
+  local -a hold
   while [[ $1 == -* && $1 != -- ]]; do
     case $1 in
       -b) focus=--no-focus ;;
       --plan) plan=1 ;;
       --from-plan) from=$2; shift ;;
+      --hold) hold+=(${2#*/}); shift ;;
       *) print -u2 "wt task: unknown option $1"; return 2 ;;
     esac
     shift
   done
-  local name=$1 prompt agent=${WT_AGENT:-pi} org td t r m main dir base existing prev new lead e
-  local usage="usage: wt task [-b] [--plan | --from-plan <file>] <name> <repo>... [-- <prompt>]"
-  local -a repos mains added words open_ws
+  local name=$1 prompt agent=${WT_AGENT:-pi} org td t r m main dir base existing prev new lead e term
+  local usage="usage: wt task [-b] [--plan | --from-plan <file>] [--hold <repo>]... <name> <repo>... [-- <prompt>]"
+  local -a repos mains added words open_ws started held
   [[ -n $name ]] || { print -u2 $usage; return 2 }
   shift
   while (( $# )) && [[ $1 != -- ]]; do repos+=($1); shift; done
@@ -589,7 +602,7 @@ _wt_task_new() {
     fi
     print -u2 $usage; return 2
   fi
-  [[ $name == (status|done|ls) ]] && { print -u2 "wt: \"$name\" is a wt task command, not a name"; return 2 }
+  [[ $name == (status|done|ls|start) ]] && { print -u2 "wt: \"$name\" is a wt task command, not a name"; return 2 }
   [[ -n $plan && -n $from ]] && { print -u2 "wt: --plan and --from-plan don't go together"; return 2 }
   if [[ -n $plan ]]; then
     words=(${(z)agent})
@@ -621,6 +634,15 @@ _wt_task_new() {
   mkdir -p $td || return 1
   [[ -f $t ]] || jq -n --arg n $name --arg org $org --arg at "$(date -Iseconds)" \
     '{name: $n, org: $org, created: $at, repos: []}' >$t || return 1
+  # The pi session that runs this (usually the planning session) owns the task. Its
+  # terminal is what finds its pane later: a pane's id changes when it moves.
+  if [[ -n $WT_OWNER_SESSION && -z $(jq -r '.owner.session // empty' $t) ]]; then
+    term=$(jq -r '.owner.terminal // empty' $t)
+    [[ -n $term || -z $HERDR_PANE_ID ]] ||
+      term=$(herdr pane get $HERDR_PANE_ID 2>/dev/null | jq -r '.result.pane.terminal_id // empty')
+    jq --arg s $WT_OWNER_SESSION --arg term "$term" \
+      '.owner = {session: $s, terminal: (if $term == "" then null else $term end)}' $t >$t.tmp && mv $t.tmp $t
+  fi
   for main in $mains; do
     r=${main:t}
     [[ -n $(jq -r --arg r $r '.repos[] | select(.name == $r) | .name' $t) ]] && continue
@@ -651,49 +673,143 @@ _wt_task_new() {
   done
   if [[ -n $from && $from != ${td:A}/plan.md ]]; then
     cp "$from" $td/plan.md || return 1
-    # A plan written in an org folder moves into the task; one inside a repo stays.
-    git -C "${from:h}" rev-parse --is-inside-work-tree >/dev/null 2>&1 || rm -f "$from"
+    # A plan written in an org folder moves into the task (and an emptied plans/
+    # folder goes with it); one inside a repo stays.
+    if ! git -C "${from:h}" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+      rm -f "$from"; rmdir "${from:h}" 2>/dev/null
+    fi
+    from=${td:A}/plan.md
   fi
   _wt_task_agents $td
 
+  local out ws root placeholder op opane ows moved tab
+  op=$(_wt_task_owner_pane $td) && IFS=$_WT_SEP read -r opane ows <<<"$op"
   open_ws=(${(f)"$(_wt_task_workspaces $td)"})
   if (( $#open_ws )); then
+    ws=$open_ws[1]
+    # The owner, still outside (e.g. its planning session in the org folder), joins.
+    if [[ -n $opane && $ows != $ws ]] && herdr pane move $opane --workspace $ws --new-tab --focus >/dev/null; then
+      moved=1
+    fi
     for r in $added; do
-      herdr tab create --workspace $open_ws[1] --label $r --no-focus \
+      herdr tab create --workspace $ws --label $r --no-focus \
         --cwd "$(jq -r --arg r $r '.repos[] | select(.name == $r) | .dir' $t)" >/dev/null
     done
-    [[ $focus == --focus ]] && herdr workspace focus $open_ws[1] >/dev/null
+    [[ -z $moved && $focus == --focus ]] && herdr workspace focus $ws >/dev/null
     [[ -z $prompt ]] || print -u2 "wt: task $name is already open; the prompt wasn't sent"
-    (( $#added )) && print -r -- "wt: added ${(j:, :)added} to task $name (AGENTS.md is updated)"
-    return 0
+  else
+    out=$(herdr workspace create --cwd $td --label $name $focus) || return 1
+    ws=$(jq -r '.result.workspace.workspace_id // empty' <<<"$out")
+    root=$(jq -r '.result.root_pane.pane_id // empty' <<<"$out")
+    placeholder=$(jq -r '.result.tab.tab_id // empty' <<<"$out")
+    [[ -n $root ]] || { print -u2 "wt: unexpected reply from herdr: $out"; return 1 }
+    # The owner becomes the first tab: move it in, then drop the placeholder tab.
+    if [[ -n $opane ]] && herdr pane move $opane --workspace $ws --new-tab --focus >/dev/null; then
+      moved=1; herdr tab close $placeholder >/dev/null; root=
+    fi
+    for e in ${(f)"$(jq -r --arg s "$_WT_SEP" '.repos[] | "\(.name)\($s)\(.dir)"' $t)"}; do
+      IFS=$_WT_SEP read -r r dir <<<"$e"
+      herdr tab create --workspace $ws --cwd "$dir" --label $r --no-focus >/dev/null
+    done
+    if [[ -n $root ]]; then
+      # No owner yet (started from a shell): the first tab's pi owns the task.
+      local how="call the wt tool with action task, branch $name and planFile plan.md (hold: repos that must wait for another's work), which starts an agent per repo; then follow them with its status action instead of implementing anything yourself."
+      if [[ -n $from ]]; then
+        lead="You own task $name: an agent per repo tab implements plan.md. Don't change code yourself: follow them with the wt tool's status action, mark the plan's steps done as they finish, and start held repos with its start_repos action when what they wait for is done.${prompt:+ $prompt}"
+      elif [[ -n $plan ]]; then
+        lead="$prompt (Write the plan to plan.md in this task folder: an Interfaces section fixing what the repos share, and one section per repo. Once it's approved, $how)"
+      elif [[ -n $prompt ]]; then
+        lead="$prompt (You own task $name. First write plan.md in this task folder: an Interfaces section fixing what the repos share, and one section per repo. Then $how)"
+      fi
+      words=(${(z)agent})
+      # Reopening a task: pick its last session up again.
+      [[ -z $new && -z $lead && ${words[1]:t} == pi ]] && agent="$agent -c"
+      # --plan after the prompt (see _wt_new).
+      herdr pane run $root "$agent${lead:+ ${(qq)lead}}${plan:+ --plan}" >/dev/null
+      term=$(herdr pane get $root 2>/dev/null | jq -r '.result.pane.terminal_id // empty')
+      [[ -z $term || -n $(jq -r '.owner.terminal // empty' $t) ]] ||
+        { jq --arg term $term '.owner = ((.owner // {session: null}) + {terminal: $term})' $t >$t.tmp && mv $t.tmp $t }
+    fi
   fi
 
-  local out ws pane
-  out=$(herdr workspace create --cwd $td --label $name $focus) || return 1
-  ws=$(jq -r '.result.workspace.workspace_id // empty' <<<"$out")
-  pane=$(jq -r '.result.root_pane.pane_id // empty' <<<"$out")
-  [[ -n $pane ]] || { print -u2 "wt: unexpected reply from herdr: $out"; return 1 }
-  for e in ${(f)"$(jq -r --arg s "$_WT_SEP" '.repos[] | "\(.name)\($s)\(.dir)"' $t)"}; do
-    IFS=$_WT_SEP read -r r dir <<<"$e"
-    herdr tab create --workspace $ws --cwd "$dir" --label $r --no-focus >/dev/null
-  done
+  # With a plan to work from, every repo that isn't held gets its agent now.
   if [[ -n $from ]]; then
-    lead="Implement the approved plan in plan.md, repo by repo in the order AGENTS.md gives.${prompt:+ $prompt}"
-  elif [[ -n $plan ]]; then
-    lead="$prompt (Write the plan to plan.md in this task folder: it's outside every repo, and saved when the task is done.)"
-  else
-    lead=$prompt
+    for r in ${(f)"$(jq -r '.repos[] | select(.agent == null) | .name' $t)"}; do
+      if (( ${hold[(Ie)$r]} )); then
+        jq --arg r $r '(.repos[] | select(.name == $r)).agent = "held"' $t >$t.tmp && mv $t.tmp $t
+        held+=($r)
+      else
+        _wt_task_start_agent $td $ws $r && started+=($r)
+      fi
+    done
   fi
-  words=(${(z)agent})
-  # Reopening a task: pick its last session up again.
-  [[ -z $new && -z $lead && ${words[1]:t} == pi ]] && agent="$agent -c"
-  # --plan after the prompt (see _wt_new).
-  herdr pane run $pane "$agent${lead:+ ${(qq)lead}}${plan:+ --plan}" >/dev/null
-  [[ $focus == --focus ]] ||
-    print -r -- "wt: task $name started in ${td/#$HOME/~}: $(jq -r '[.repos[].name] | join(" → ")' $t)"
+  print -r -- "wt: task $name (${td/#$HOME/~}): $(jq -r '[.repos[].name] | join(" → ")' $t)"
+  (( $#added && ! new )) && print -r -- "wt: added ${(j:, :)added} (AGENTS.md is updated)"
+  (( $#started )) && print -r -- "wt: agents started in ${(j:, :)started}"
+  (( $#held )) && print -r -- "wt: held, start later with wt task start: ${(j:, :)held}"
+  [[ -n $moved ]] && print -r -- "wt: this session moved into the task's workspace, as its first tab"
+  return 0
 }
 
-# AGENTS.md for the lead session, regenerated from task.json.
+# The task's owner pane, as "<pane id><sep><workspace id>", found by its terminal.
+_wt_task_owner_pane() {
+  local term
+  term=$(jq -r '.owner.terminal // empty' $1/task.json 2>/dev/null)
+  [[ -n $term ]] || return 1
+  herdr pane list 2>/dev/null | jq -er --arg t $term --arg s "$_WT_SEP" \
+    '[.result.panes[] | select(.terminal_id == $t)][0] // empty | "\(.pane_id)\($s)\(.workspace_id)"'
+}
+
+# True if the pi session running this ($WT_OWNER_SESSION) owns task folder $1.
+_wt_task_owned() {
+  [[ -n $WT_OWNER_SESSION && $(jq -r '.owner.session // empty' $1/task.json 2>/dev/null) == $WT_OWNER_SESSION ]]
+}
+
+# _wt_task_start_agent <task folder> <workspace> <repo>: $WT_AGENT in the repo's tab
+# (made if missing), told to do that repo's part of plan.md.
+_wt_task_start_agent() {
+  local td=$1 ws=$2 r=$3 t=$1/task.json name org dir after state pane tab msg
+  name=$(jq -r .name $t); org=$(jq -r .org $t)
+  dir=$(jq -r --arg r $r '.repos[] | select(.name == $r) | .dir' $t)
+  [[ -n $dir ]] || { print -u2 "wt: $r isn't part of task $name"; return 1 }
+  state=$(jq -r --arg r $r '.repos[] | select(.name == $r) | .agent // empty' $t)
+  [[ $state != started ]] || { print -u2 "wt: $r's agent is already started"; return 1 }
+  after=$(jq -r --arg r $r '.repos[] | select(.name == $r) | .after | join(", ")' $t)
+  pane=$(herdr pane list 2>/dev/null | jq -r --arg w $ws --arg d "$dir" \
+    '[.result.panes[] | select(.workspace_id == $w and .cwd == $d)][0].pane_id // empty')
+  if [[ -z $pane ]]; then
+    tab=$(herdr tab create --workspace $ws --cwd "$dir" --label $r --no-focus | jq -r '.result.tab.tab_id // empty')
+    pane=$(herdr pane list | jq -r --arg t "$tab" '[.result.panes[] | select(.tab_id == $t)][0].pane_id // empty')
+  fi
+  [[ -n $pane ]] || { print -u2 "wt: no tab for $r"; return 1 }
+  msg="You are the agent for repo $r in task $name ($org), working in its worktree on branch $name. First read $td/AGENTS.md and $td/plan.md. Do only $r's part of the plan: its Interfaces section is fixed, and each other repo has its own agent. Commit here, push with git push -u origin $name, and open $r's PR with gh pr create"
+  [[ -z $after ]] ||
+    msg+=" --draft, its description saying \"Part of $name. Merge after ${org#*/}/<repo>#<number>.\" for $after (wt status shows the numbers)"
+  msg+=". Then say in one line what you did."
+  herdr pane run $pane "${WT_AGENT:-pi} ${(qq)msg}" >/dev/null || return 1
+  jq --arg r $r '(.repos[] | select(.name == $r)).agent = "started"' $t >$t.tmp && mv $t.tmp $t
+}
+
+# wt task start [--task <name>] <repo>...: start held repos' agents.
+_wt_task_start() {
+  local name td r
+  local -a repos ws
+  while (( $# )); do
+    case $1 in
+      --task) name=$2; shift ;;
+      *) repos+=(${1#*/}) ;;
+    esac
+    shift
+  done
+  (( $#repos )) || { print -u2 "usage: wt task start [--task <name>] <repo>..."; return 2 }
+  td=$(_wt_task_find "$name") || { print -u2 "wt: no task ${name:-here}: run it in a task, or give --task <name>"; return 1 }
+  ws=(${(f)"$(_wt_task_workspaces $td)"})
+  (( $#ws )) || { print -u2 "wt: task ${td:t} isn't open: open it with wt task ${td:t}"; return 1 }
+  for r in $repos; do _wt_task_start_agent $td $ws[1] $r || return 1; done
+  print -r -- "wt: agents started in ${(j:, :)repos}"
+}
+
+# AGENTS.md for everyone working on the task, regenerated from task.json.
 _wt_task_agents() {
   local td=$1 t=$1/task.json name org
   name=$(jq -r .name $t); org=$(jq -r .org $t)
@@ -709,30 +825,36 @@ _wt_task_agents() {
     jq -r '.repos | to_entries[] | "\(.key + 1). `\(.value.name)`: \(.value.dir)" +
       (if (.value.after | length) > 0 then " (merges after \(.value.after | join(", ")))" else "" end)' $t
     print
-    print -r -- "- Commit in each repo separately, and push its branch: \`git -C <repo> push -u origin $name\`."
-    print -r -- "- One PR per repo (\`gh pr create\`, run inside the repo). A repo that merges after another"
-    print -r -- "  gets a draft PR (\`--draft\`) until the one before it is merged, and its description"
+    print -r -- "Who does what:"
+    print
+    print -r -- "- The owner (the task workspace's first tab, usually the session that planned it) doesn't"
+    print -r -- "  change code. It follows the task with \`wt status\` (the wt tool's status action),"
+    print -r -- "  marks the plan's steps done, and starts held repos (action start_repos)."
+    print -r -- "- Each repo tab runs an agent for that repo only. It implements that repo's part of"
+    print -r -- "  plan.md, commits, pushes (\`git push -u origin $name\`) and opens that repo's PR. A repo"
+    print -r -- "  that merges after another gets a draft PR (\`gh pr create --draft\`), whose description"
     print -r -- "  says: \"Part of $name. Merge after <owner>/<repo>#<number>.\""
-    print -r -- "- \`wt task status\` (or the wt tool's status action) shows each repo's PR, its checks,"
-    print -r -- "  and what it waits for."
-    [[ -f $td/plan.md ]] && print -r -- "- The plan is in plan.md."
+    print -r -- "- plan.md's Interfaces section fixes what the repos share: build against it, don't change it"
+    print -r -- "  alone; ask the user if it has to change."
+    [[ -f $td/plan.md ]] || print -r -- "- There's no plan.md yet: the owner writes it first."
     print -r -- "- Don't remove worktrees or this folder: the user runs /wt done once everything is merged."
   } >$td/AGENTS.md
 }
 
 _wt_task_status() {
-  local td t e n dir main after state pr num prst checks url wait next
+  local td t e n dir main after agent state pr num prst checks url wait next
   local -A merged
-  local -a rows
+  local -a rows held
   td=$(_wt_task_find "$1") || { print -u2 "wt: no task ${1:-here}: run it in a task, or give its name"; return 1 }
   t=$td/task.json
-  for e in ${(f)"$(jq -r --arg s "$_WT_SEP" '.repos[] | "\(.name)\($s)\(.dir)\($s)\(.main)\($s)\(.after | join(" "))"' $t)"}; do
-    IFS=$_WT_SEP read -r n dir main after <<<"$e"
+  for e in ${(f)"$(jq -r --arg s "$_WT_SEP" '.repos[] | "\(.name)\($s)\(.dir)\($s)\(.main)\($s)\(.after | join(" "))\($s)\(.agent // "-")"' $t)"}; do
+    IFS=$_WT_SEP read -r n dir main after agent <<<"$e"
     if [[ -d $dir ]]; then
       _wt_fetch "$main"; state=$(_wt_state "$dir" "$(_wt_base "$main")" </dev/null)
     else
       state=removed
     fi
+    [[ $agent == held ]] && held+=($n)
     pr=$(cd -q "$main" && gh pr list --head "$(jq -r .name $t)" --state all --limit 1 \
       --json number,state,isDraft,url,statusCheckRollup --jq '.[0] // empty | [
         (.number | tostring),
@@ -746,19 +868,19 @@ _wt_task_status() {
         .url] | join("\u001f")' </dev/null 2>/dev/null) || pr="?"
     IFS=$_WT_SEP read -r num prst checks url <<<"$pr"
     [[ $prst == merged ]] && merged[$n]=1
-    rows+=("$n$_WT_SEP$state$_WT_SEP$num$_WT_SEP$prst$_WT_SEP$checks$_WT_SEP$url$_WT_SEP$after")
+    rows+=("$n$_WT_SEP$state$_WT_SEP$num$_WT_SEP$prst$_WT_SEP$checks$_WT_SEP$url$_WT_SEP$after$_WT_SEP$agent")
   done
   print -r -- "task $(jq -r .name $t) (${td/#$HOME/~})"
-  printf '%-20s %-9s %-12s %-8s %s\n' REPO WORKTREE PR CHECKS 'WAITS FOR'
+  printf '%-20s %-9s %-8s %-12s %-8s %s\n' REPO WORKTREE AGENT PR CHECKS 'WAITS FOR'
   for e in $rows; do
-    IFS=$_WT_SEP read -r n state num prst checks url after <<<"$e"
+    IFS=$_WT_SEP read -r n state num prst checks url after agent <<<"$e"
     wait=; for a in ${=after}; do (( $+merged[$a] )) || wait+="${wait:+, }$a"; done
     case $num in
       '?') pr='?' ;;
       '') pr=- ;;
       *) pr="#$num $prst" ;;
     esac
-    printf '%-20s %-9s %-12s %-8s %s\n' $n $state "$pr" "${checks:--}" "${wait:--}"
+    printf '%-20s %-9s %-8s %-12s %-8s %s\n' $n $state "${agent:--}" "$pr" "${checks:--}" "${wait:--}"
     [[ -n $next || -n $wait || $prst == merged ]] && continue
     case $prst in
       '') [[ $num == '?' ]] && next="check $n's PR on GitHub (gh can't see it)" ||
@@ -769,6 +891,7 @@ _wt_task_status() {
     esac
   done
   print
+  (( $#held )) && print -r -- "Held: ${(j:, :)held}. Start with wt task start <repo> once what it waits for is done."
   if (( ${#merged} == $#rows )); then
     print "Every PR is merged: wt task done removes the task."
   else
@@ -804,6 +927,8 @@ _wt_task_done() {
   done
   ws=(${(f)"$(_wt_task_workspaces $td)"})
   [[ -n $HERDR_WORKSPACE_ID ]] && (( ${ws[(Ie)$HERDR_WORKSPACE_ID]} )) && here=1
+  # The owner moved into the task workspace, so its HERDR_WORKSPACE_ID is stale.
+  _wt_task_owned $td && here=1
   if [[ -n $check ]]; then
     local -a plans=($td/**/*.(md|mdx)(N.)); plans=(${plans:#$td/AGENTS.md})
     print -rl -- $rows | jq -R -s --arg s "$_WT_SEP" --arg task $name --arg dir $td \
@@ -841,7 +966,7 @@ _wt_task_ls() {
   local t open n=0
   for t in $_WT_ROOT/*/*/.tasks/*/task.json(N.); do
     (( n++ )) || printf '%-28s %-28s %-5s %s\n' TASK ORG OPEN 'REPOS (merge order)'
-    open=; [[ -n $(_wt_task_workspaces ${t:h}) ]] && open=yes
+    open=; _wt_task_open ${t:h} && open=yes
     printf '%-28s %-28s %-5s %s\n' ${t:h:t} "$(jq -r .org $t)" "${open:--}" "$(jq -r '[.repos[].name] | join(" → ")' $t)"
   done
   (( n )) || print "wt: no tasks"

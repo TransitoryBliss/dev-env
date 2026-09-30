@@ -129,26 +129,34 @@ worktree. When the worktree is removed, `.wt/` is first copied to
 ask the agent to plan several tasks in parallel; each waiting plan gets its own name through the
 proxy (`plan.<branch>.<machine>.localhost`) and a herdr notification with the link.
 
-**Tasks across repos:** a change that spans several repos of one org is a task:
+**Tasks across repos:** a change that spans several repos of one org is a task. The usual way
+in is planning from the org folder:
 
 ```sh
-cd ~/source/github.com/<owner>      # or any repo of that org
-wt task [-b] [--plan | --from-plan <file>] <name> <repo>... [-- <prompt>]
+cd ~/source/github.com/<owner>      # we don't know yet which repos it touches
+pi --plan                            # "Add a trending-posts module to the dashboard"
 ```
 
-The repos are listed in the order their PRs must merge. Each gets a worktree on branch `<name>`
-(start it with the issue key, `mc-1234-…`, and Linear links every PR to the issue), in the usual
-place. The task itself lives in `~/.herdr/worktrees/<host>/<owner>/.tasks/<name>/`: `task.json`
-(repos and what each waits for), an `AGENTS.md` that tells the lead session about the repos and
-the merge order, links to the worktrees, and `plan.md` if it was planned. One herdr workspace
-holds the lead pi session (in the task folder) and a tab per repo. Running `wt task <name>` again
-with more repos adds them. `--plan` plans first (the plan goes to the task's `plan.md`);
-`--from-plan` hands over an approved plan, which a planning session in the org folder does with
-the `wt` tool's `task` action. `wt task status` shows each repo's PR, checks, and what it
-waits for, and says what to do next; later repos get draft PRs until the one before is merged.
-Merging stays on GitHub. `/wt done` (or `wt done`) in the lead session removes every worktree,
-branch and the task, if nothing is lost; the plan is saved first. While any pane is in a task,
-gc keeps all of its worktrees, merged ones too; once it's closed they go like any other.
+A multi-repo plan has an **Interfaces** section fixing what the repos share (APIs, schemas,
+events), one section per repo in the order their PRs must merge, and says which repos must wait
+for another's work. Once you approve it, the planning session calls the `wt` tool's `task`
+action and becomes the task's **owner**: each repo gets a worktree on branch `<name>` (start
+it with the issue key, `mc-1234-…`, and Linear links every PR to the issue), one herdr
+workspace opens with the owner moved in as its first tab and a tab per repo, and every repo
+tab gets its own pi agent that implements that repo's part, in parallel. Repos marked as
+waiting are held until the owner (or you: `wt task start <repo>`) starts them. The owner
+doesn't write code: ask it how it's going and it checks `wt status` (each repo's agent, PR,
+checks, and what it waits for) and ticks off the plan's steps. Later repos get draft PRs until
+the one before is merged; merging stays on GitHub. `/wt done` in the owner removes every
+worktree, branch and the task, if nothing is lost; the plan is saved first.
+
+From a shell, `wt task [-b] [--plan | --from-plan <file>] [--hold <repo>]... <name> <repo>...
+[-- <prompt>]` does the same, with a new pi as the owner in the first tab (it writes the plan,
+then starts the repo agents). Running `wt task <name>` again with more repos adds them. The
+task itself lives in `~/.herdr/worktrees/<host>/<owner>/.tasks/<name>/`: `task.json` (repos,
+merge order, agents, owner), an `AGENTS.md` every agent reads, links to the worktrees, and
+`plan.md`. While the owner or any pane is in a task, gc keeps all of its worktrees, merged
+ones too; once it's closed they go like any other.
 
 Every account gets its own SSH key, `~/.ssh/id_ed25519_<account>`. Git uses the default
 identity everywhere, except in repos whose remote, or path under `~/source`, matches an override.
