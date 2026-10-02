@@ -44,10 +44,10 @@ PLAYWRIGHT_CLI = 0.1.19
 PI_PACKAGES = \
 	@plannotator/pi-extension@0.27.19 \
 	pi-claude-code-provider@0.5.0 \
-	pi-subagents@0.71.0 \
-	@juicesharp/rpiv-ask-user-question@2.11.0 \
+	pi-subagents@0.74.0 \
+	@juicesharp/rpiv-ask-user-question@2.12.0 \
 	pi-playwright@0.1.2 \
-	pi-web-access@0.31.0
+	pi-web-access@0.35.0
 
 # Optional, per-config additions to the variables above, e.g.
 #   PI_PACKAGES += some-pi-package@1.2.3
