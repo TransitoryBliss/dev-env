@@ -22,13 +22,13 @@
 
 rustPlatform.buildRustPackage (finalAttrs: {
   pname = "pi-session-manager";
-  version = "0.8.6";
+  version = "0.8.8";
 
   src = fetchFromGitHub {
     owner = "Dwsy";
     repo = "pi-session-manager";
     tag = "v${finalAttrs.version}";
-    hash = "sha256-YwW/l7aO1MD2P+tNPUacZrU1HGcxpsLhky72UORauag=";
+    hash = "sha256-SVNzM08hdrSBT4dNHJz50YZbqvZIOUbikGlRX6Y32lg=";
   };
 
   patches = [ ./security.patch ];

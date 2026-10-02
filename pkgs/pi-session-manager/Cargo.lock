@@ -4999,7 +4999,7 @@ dependencies = [
 
 [[package]]
 name = "pi-session-cli"
-version = "0.8.6"
+version = "0.8.8"
 dependencies = [
  "anyhow",
  "axum",
@@ -5025,7 +5025,7 @@ dependencies = [
 
 [[package]]
 name = "pi-session-manager"
-version = "0.8.6"
+version = "0.8.8"
 dependencies = [
  "async-stream",
  "axum",

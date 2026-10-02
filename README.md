@@ -232,7 +232,7 @@ For `gh`, run `gh auth login --git-protocol ssh --skip-ssh-key` once per account
   web UI embedded, no desktop app. `devEnv.sessionManager.enable` runs it as a systemd user
   service on `127.0.0.1:52131`, links its pi extension (psm-bridge, `/psm` and `/kanban`) into
   `~/.pi/agent/extensions`, and with `devEnv.proxy` serves it at `http://psm.<machine>.localhost:8090`.
-  The package carries `security.patch`: upstream 0.8.6 trusts a client-supplied
+  The package carries `security.patch`: upstream (0.8.6 to 0.8.8 at least) trusts a client-supplied
   `X-Forwarded-For`, answers every origin with `Access-Control-Allow-Origin: *`, and creates
   the same fixed token on every install, which together let anyone who reaches it, or any web
   page, open a shell as you. Drop the patch once upstream fixes it.

@@ -5,7 +5,7 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
     # For fast-moving tools (pi, Claude Code) that lag behind in the stable release.
     nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixos-unstable";
-    # pi >= 0.86.1 (needed by pi-claude-code-provider) is only on master so far.
+    # pi 1.0 (built-in MCP) is only on master so far; unstable has 0.99.
     # Once it reaches nixos-unstable, switch pi back and drop this input.
     nixpkgs-master.url = "github:NixOS/nixpkgs/master";
 
@@ -25,7 +25,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    herdr.url = "github:herdrdev/herdr/v0.9.1";
+    herdr.url = "github:herdrdev/herdr/v0.9.3";
 
     # Prebuilt nix-index database, for comma (`, <cmd>`) and command-not-found.
     nix-index-database = {

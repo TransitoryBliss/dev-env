@@ -42,8 +42,8 @@ PLAYWRIGHT_CLI = 0.1.19
 # at every start and lists any newer release; pinned ones only change here.
 # To upgrade, bump a version (`npm view <pkg> version`) and re-run agents/setup.
 PI_PACKAGES = \
-	@plannotator/pi-extension@0.27.19 \
-	pi-claude-code-provider@0.5.0 \
+	@plannotator/pi-extension@0.27.25 \
+	pi-claude-code-provider@0.6.0 \
 	pi-subagents@0.74.0 \
 	@juicesharp/rpiv-ask-user-question@2.12.0 \
 	pi-playwright@0.1.2 \

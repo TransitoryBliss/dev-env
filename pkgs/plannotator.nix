@@ -3,16 +3,16 @@
 { lib, stdenvNoCC, fetchurl }:
 
 let
-  version = "0.27.16";
+  version = "0.27.25";
   # Per-platform release asset and hash (from the release's .sha256 files).
   assets = {
     aarch64-linux = {
       name = "plannotator-linux-arm64";
-      hash = "sha256-DpzN6Z8OyATidNLSIPUFozLvZtMv27UDYfkyFS6FgH4=";
+      hash = "sha256-79ppKHm2gL+kzgSQcRme7F2t349pIcJiX6iKxWDLSJk=";
     };
     x86_64-linux = {
       name = "plannotator-linux-x64";
-      hash = "sha256-3TMv65r3Qo4GM+1/qnSa2R6JV2tabaquOIDBvK794RY=";
+      hash = "sha256-ABr3dS+FQgJFifr8RK7DvifHMTOiw33zjwtZHCwUXdg=";
     };
   };
   asset = assets.${stdenvNoCC.hostPlatform.system}

@@ -204,7 +204,7 @@ commit its `flake.lock`.
   lives next to the package. Regenerate it in a checkout of the new tag with
   `CARGO_RESOLVER_INCOMPATIBLE_RUST_VERSIONS=fallback cargo generate-lockfile`; without that,
   cargo picks crates that need a newer rustc than nixpkgs has (`kstring` 2.0.5 wanted 1.96).
-  `security.patch` is not optional: unpatched 0.8.6 takes `X-Forwarded-For: 127.0.0.1` from
+  `security.patch` is not optional: unpatched (0.8.6 to 0.8.8 at least) it takes `X-Forwarded-For: 127.0.0.1` from
   any client as proof of loopback (loopback skips the token), sends
   `Access-Control-Allow-Origin: *`, and ships a fixed default token. With its terminal
   endpoints that is a shell for anyone who reaches the port, or any web page through a
