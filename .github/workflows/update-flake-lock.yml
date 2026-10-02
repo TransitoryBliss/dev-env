@@ -1,0 +1,33 @@
+# Weekly `nix flake update`, as a pull request. `nix flake check` runs on the
+# PR branch here, because PRs opened with GITHUB_TOKEN don't trigger other
+# workflows. herdr is pinned to a tag, so it only moves when flake.nix does;
+# `dev-env-updates` on a machine reports that and the other pins.
+name: update-flake-lock
+
+on:
+  schedule:
+    - cron: "0 6 * * 1" # Mondays 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: DeterminateSystems/nix-installer-action@v23
+      - id: update
+        uses: DeterminateSystems/update-flake-lock@v29
+        with:
+          pr-title: "Update flake.lock"
+          commit-msg: "Update flake.lock"
+      - name: nix flake check on the PR branch
+        if: steps.update.outputs.pull-request-number != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr checkout ${{ steps.update.outputs.pull-request-number }}
+          nix flake check

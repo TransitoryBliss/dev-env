@@ -41,10 +41,17 @@ PLAYWRIGHT_CLI = 0.1.19
 # Pi packages for `agents/setup`, pinned. Pi checks unpinned ones against npm
 # at every start and lists any newer release; pinned ones only change here.
 # To upgrade, bump a version (`npm view <pkg> version`) and re-run agents/setup.
+# A plain name is an npm package; anything with a "<type>:" prefix is passed to
+# `pi install` as is (e.g. git:github.com/owner/repo@<commit>).
+#
+# pi-subagents comes from a commit on main until 0.75 is released: 0.74.0
+# can't start background children on pi 1.0 (pi-subagents#2641, fixed by
+# #2634). When 0.75 is out, go back to pi-subagents@<version> and move
+# npm:pi-subagents from PI_PACKAGES_REMOVED to the git source.
 PI_PACKAGES = \
 	@plannotator/pi-extension@0.27.25 \
-	pi-claude-code-provider@0.6.0 \
-	pi-subagents@0.74.0 \
+	pi-claude-bridge@0.9.1 \
+	git:github.com/nicobailon/pi-subagents@9eb55dd93abdb3bb5aa468a286dad6bab3e7a7d9 \
 	@juicesharp/rpiv-ask-user-question@2.12.0 \
 	pi-playwright@0.1.2 \
 	pi-web-access@0.35.0
@@ -53,6 +60,16 @@ PI_PACKAGES = \
 #   PI_PACKAGES += some-pi-package@1.2.3
 # Your extras go there, not in this file (base/sync would overwrite them).
 -include Makefile.local
+
+# Pi package sources earlier setups installed and `agents/setup` removes:
+# pi-mcp-adapter (pi has MCP built in since 0.99, and an extension that owns
+# /mcp turns that off), pi-claude-code-provider (mothballed after 0.6.0;
+# pi-claude-bridge replaces it), and npm's pi-subagents (see above).
+PI_PACKAGES_REMOVED = npm:pi-mcp-adapter npm:pi-claude-code-provider npm:pi-subagents
+
+# Your Claude plan, for pi-claude-bridge: "pro", or "max" for Max, Team
+# Premium or Enterprise (Opus with 1M context). Set it in Makefile.local.
+CLAUDE_PLAN ?= pro
 
 BASE_DIR = .cache/dev-env-base
 ifneq ($(DEV_ENV),)
@@ -258,12 +275,19 @@ switch:
 # Agent add-ons that install through their own tooling; safe to re-run.
 agents/setup:
 	@test -d ~/.claude || { echo "Run 'claude' once and log in first, then re-run make agents/setup."; exit 1; }
-	for p in $(PI_PACKAGES); do pi install npm:$$p || exit 1; done
-	@# pi has MCP built in since 0.99 (devEnv.mcp registers the servers), and an
-	@# extension that owns /mcp, like pi-mcp-adapter, turns it off. Remove the
-	@# adapter from earlier setups, and the cache files it left behind.
-	@if pi list 2>/dev/null | grep -q 'npm:pi-mcp-adapter'; then pi remove npm:pi-mcp-adapter || exit 1; fi
+	for p in $(PI_PACKAGES); do case $$p in *:*) ;; *) p=npm:$$p ;; esac; pi install $$p || exit 1; done
+	@for p in $(PI_PACKAGES_REMOVED); do \
+		if pi list 2>/dev/null | grep -qE "^ *$$p(@| |$$)"; then pi remove $$p || exit 1; fi; done
 	rm -f ~/.pi/agent/mcp-cache.json ~/.pi/agent/mcp-onboarding.json
+	@# pi-claude-bridge: the plan, and Nix's claude instead of the Agent SDK's
+	@# bundled binary. Merged into the file, since the bridge writes to it too.
+	@# A default model from pi-claude-code-provider moves to the bridge.
+	@f=~/.pi/agent/claude-bridge.json; test -s $$f || echo '{}' > $$f; \
+		jq --arg plan '$(CLAUDE_PLAN)' --arg claude "$$(command -v claude)" \
+		'.provider.plan = $$plan | .provider.pathToClaudeCodeExecutable = $$claude' $$f > $$f.tmp && mv $$f.tmp $$f
+	@f=~/.pi/agent/settings.json; test ! -f $$f || { \
+		jq 'if .defaultProvider == "pi-claude-code-provider" then .defaultProvider = "claude-bridge" | .defaultModel = ({"opus": "claude-opus-5-5", "sonnet": "claude-sonnet-5-5", "haiku": "claude-haiku-4-5"}[.defaultModel] // "claude-opus-5-5") else . end' \
+		$$f > $$f.tmp && mv $$f.tmp $$f; }
 	@# pi-playwright depends on @playwright/cli by a range, and every release of
 	@# that pins a playwright-core which accepts exactly one Chromium revision.
 	@# The browsers come from Nix, so the CLI is held at the release that matches

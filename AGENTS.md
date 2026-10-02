@@ -167,7 +167,29 @@ commit its `flake.lock`.
   Name and email come from `includeIf "hasconfig:remote.*.url:…"` and `gitdir:` includes.
   Files included via `hasconfig` must not contain remote URLs.
 - **pi** comes from `nixpkgs-master`, for pi 1.0 (unstable has 0.99.2). Move it back to
-  `nixpkgs-unstable` (and drop the input) once unstable has 1.0.
+  `nixpkgs-unstable` (and drop the input) once unstable has 1.0. **Claude Code** comes
+  from `nixpkgs-unstable`, imported with its own `allowUnfreePredicate`: `legacyPackages`
+  ignores the system's unfree setting.
+- **Claude in pi is pi-claude-bridge** (Agent SDK), not pi-claude-code-provider (mothballed
+  after 0.6.0). `agents/setup` merges `provider.plan` (`CLAUDE_PLAN`) and
+  `provider.pathToClaudeCodeExecutable` (Nix's `claude`, not the SDK's bundled binary) into
+  `~/.pi/agent/claude-bridge.json`, which the bridge also writes to, so it isn't a store link,
+  and moves a `pi-claude-code-provider` default model to `claude-bridge/claude-*`. Don't run
+  `agents/setup` from a pi session that runs on a provider it removes.
+- **pi-subagents comes from a git commit** until 0.75: 0.74.0 can't start background children
+  on pi 1.0 (it requires `@earendil-works/pi-agent-core/node`, which 1.0 no longer exports;
+  pi-subagents#2641). `PI_PACKAGES` takes any `pi install` source; plain names are `npm:`.
+  `PI_PACKAGES_REMOVED` lists full sources, so switching an entry between npm and git means
+  moving the old source there. Test background launches for real (`--mode json`, look at the
+  `subagent` tool result): a workflow script can return the expected text without any child.
+- **`dev-env-updates`** (`modules/home/dev-env-updates.py`, wrapped in `agents.nix`) reports
+  what has newer releases and changes nothing. `agents.nix` bakes in the pinned versions and
+  the base's locked GitHub inputs; keep a new pin in that JSON. npm's registry answers 406 to
+  GitHub's `Accept` header, so it is sent to GitHub only. `.github/workflows/update-flake-lock.yml`
+  opens a weekly `flake.lock` PR and runs `nix flake check` on it in the same job.
+- **rtk rewrites shell commands** in pi's bash tool: it reformats `diff` output (no `<`/`>`
+  lines, "Files are identical" for different files) and mangles `;;` in `case`. Compare with
+  `cmp` or a script, and put `case` in a script file.
 - **MCP is pi's built-in support, not pi-mcp-adapter.** Any extension that registers `/mcp`
   (the adapter does) turns the built-in support off: pi then ignores `mcp.json` and registered
   servers. `agents/setup` removes the adapter from older setups. Per-org scopes can't be files:
@@ -175,9 +197,7 @@ commit its `flake.lock`.
   a server in `mcp.json` overrides a registered one of the same name, so `inheritGlobal = false`
   only works if the global servers are registered too, not written to `mcp.json`. Leave
   `~/.pi/agent/mcp.json` to pi; `/mcp` writes enable/exposure changes into it. Registered
-  servers are also invisible to the shell's `pi mcp list` (no extensions there). **Claude Code** comes
-  from `nixpkgs-unstable`, imported with its own `allowUnfreePredicate`: `legacyPackages`
-  ignores the system's unfree setting.
+  servers are also invisible to the shell's `pi mcp list` (no extensions there).
 - **rtk's pi extension** is fetched from an rtk release tag, because nixpkgs' rtk predates
   `rtk init --agent pi`. The extension only calls `rtk rewrite`, so the older binary works.
 - **Playwright is two pins that must agree.** `devEnv.languages.playwright.enable` only provides
@@ -337,7 +357,7 @@ commit its `flake.lock`.
   requires a prompt (otherwise the agent picks `PLAN.md`, which git sees) and a pi agent;
   check the agent's first word via an array (`local -a words=(${(z)agent})`):
   `${${(z)agent}[1]}` on a one-word value takes the first *letter*. To test cheaply:
-  `WT_AGENT="pi --model pi-claude-code-provider/haiku"` and a prompt saying "do not ask
+  `WT_AGENT="pi --model claude-bridge/claude-haiku-4-5"` and a prompt saying "do not ask
   questions, submit right away"; then check `ss -ltn` for one port per waiting plan.
   Resuming a session whose worktree is gone works interactively (pi offers to continue in the
   current directory); `pi -p --session` refuses with "Stored session working directory does

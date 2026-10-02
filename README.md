@@ -288,7 +288,9 @@ For `gh`, run `gh auth login --git-protocol ssh --skip-ssh-key` once per account
   `xdg-open` that hands URLs to Windows. The same helper opens `claude` and `gh` login links.
   `glow file.md` renders markdown in the terminal instead.
 - Some add-ons install through their own tooling, via the template's `make agents/setup`:
-  plannotator's pi extension, the Claude Code provider for pi,
+  plannotator's pi extension,
+  [pi-claude-bridge](https://pi.dev/packages/pi-claude-bridge) (Claude through your Claude Code
+  login, via the Agent SDK; set `CLAUDE_PLAN = max` in `Makefile.local` on a Max plan),
   [pi-subagents](https://pi.dev/packages/pi-subagents) (delegation to sub-agents),
   [rpiv-ask-user-question](https://pi.dev/packages/@juicesharp/rpiv-ask-user-question)
   (structured questions instead of guesses),
@@ -358,3 +360,15 @@ against a local checkout: `make vm/bootstrap NIXADDR=<ip> DEV_ENV=../dev-env`. W
 
 After changing the template, render it into a dev-env-example checkout and commit there:
 `templates/sync-example.sh ../dev-env-example` (`--check` only reports drift).
+
+### Keeping things up to date
+
+`dev-env-updates` (installed on every machine) lists what has a newer release: pi packages
+against npm (or their repo, for git ones), herdr plugins, what Nix pins (plannotator,
+pi-session-manager, herdr, rtk's pi hook, pi, Claude Code), the `@playwright/cli` pin, and
+the base's flake inputs against their branches. It changes nothing; bump the pins here.
+Some need care: pi-session-manager's `Cargo.lock` and `security.patch`, and `PLAYWRIGHT_CLI`,
+which must match Nix's Chromium.
+
+A weekly GitHub Action (`.github/workflows/update-flake-lock.yml`, also runnable by hand) runs
+`nix flake update`, opens a pull request, and runs `nix flake check` on it.

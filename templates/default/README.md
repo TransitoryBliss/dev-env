@@ -142,11 +142,12 @@ After that, `make switch` inside WSL rebuilds; it picks the host from the hostna
    Check them with `ssh -T git@github.com`.
 2. Run `claude` and log in (open the link it prints in your browser). `make agents/setup` needs this first.
 3. `make agents/setup` installs the agent add-ons that use their own installers
-   (plannotator's pi extension, the Claude Code provider for pi,
+   (plannotator's pi extension, pi-claude-bridge (Claude through your `claude` login),
    pi-subagents, rpiv-ask-user-question, pi-playwright, pi-web-access, rtk's Claude Code hook,
    herdr-annotate, herdr-ohmyzsh). It starts a background herdr server if none is running.
    Until it has run, each new shell prints `[oh-my-zsh] plugin 'herdr' not found`.
-4. Run `pi` and pick a model; with the Claude Code provider, it uses your `claude` login.
+4. Run `pi` and pick a model with `/model`, e.g. `claude-bridge/claude-opus-5-5`; the bridge uses
+   your `claude` login. On a Max plan, set `CLAUDE_PLAN = max` in `Makefile.local` first.
 5. Start `nvim` once. lazy.nvim bootstraps itself, installs the plugins and compiles the
    treesitter parsers listed in `nvim/lua/plugins/treesitter.lua` (the first run takes a
    minute or two). It writes `nvim/lazy-lock.json` with the exact plugin commits — **commit
@@ -279,8 +280,8 @@ Inside a machine, the same is `nix flake update dev-env && make base/sync`.
 `dev-env.mk` is a plain file in this repo, not read from the flake input, because `make vm/*`
 runs on the Mac, which has no Nix. Don't edit it: `make base/check` (also run by `make check`)
 fails when it differs from the locked input's copy. Your own variables and targets go in the
-`Makefile` (before the `include`) or in `Makefile.local` (`PI_PACKAGES +=`, `PROXY_PORT`,
-`MCP_OAUTH_PORT`, `SSH_CMD`, extra targets).
+`Makefile` (before the `include`) or in `Makefile.local` (`PI_PACKAGES +=`, `CLAUDE_PLAN`,
+`PROXY_PORT`, `MCP_OAUTH_PORT`, `SSH_CMD`, extra targets).
 
 **Configs from before `dev-env.mk`** had the whole thing in `Makefile`. To switch: update the
 input (`make vm/update NIXADDR=<ip> INPUT=dev-env` still works with the old Makefile), then,
