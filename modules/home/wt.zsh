@@ -212,8 +212,8 @@ _wt_remove() {
   fi
   [[ -z $branch ]] || git -C "$main" branch -q -D "$branch"
   git -C "$main" worktree prune
-  # herdr leaves the empty <repo> directory (and a/ for a branch a/b) behind. Owner
-  # directories with scope files (.mcp.json) aren't empty, so they stay.
+  # herdr leaves the empty <repo> directory (and a/ for a branch a/b) behind; remove
+  # empty parents up to the worktree root.
   d=${dir:h}
   while [[ $d == $_WT_ROOT/?* ]] && rmdir "$d" 2>/dev/null; do d=${d:h}; done
   return 0

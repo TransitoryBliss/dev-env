@@ -90,7 +90,7 @@ Home level, under `devEnv.user.home`:
 | `devEnv.secrets.sopsFile` / `.env`   | Environment variables from a sops-encrypted file (see the template README) |
 | `devEnv.secrets.scopes."<host/owner>".env` | The same, replacing the global ones in repos under one org or user |
 | `devEnv.backup.enable` / `.excludeScopes` | Opt-in hourly restic backup of agent sessions (pi, Claude Code), chosen by the directory each session was started in (see the template README) |
-| `devEnv.mcp.servers`                 | MCP servers for pi in every directory (`~/.config/mcp/mcp.json`) |
+| `devEnv.mcp.servers`                 | MCP servers for pi in every directory (registered by an extension, see below) |
 | `devEnv.mcp.scopes."<host/owner>"`   | MCP servers for repos under one org or user; `inheritGlobal = false` hides the global ones |
 | `devEnv.mcp.callbackPort`            | Fixed OAuth callback port (default 19876), forwarded by `make vm/ssh` |
 | `devEnv.notes.repo`                  | Git repo for ideas and todos (`host/owner/repo`): installs `note`, `idea`, `todo` and a `notes` skill for pi and Claude Code; null (default) leaves them out |
@@ -181,9 +181,8 @@ For `gh`, run `gh auth login --git-protocol ssh --skip-ssh-key` once per account
 
 ## Tools and where they come from
 
-- **pi** comes from nixpkgs `master`, because
-  [pi-claude-code-provider](https://pi.dev/packages/pi-claude-code-provider) needs pi 0.86.1+.
-  Once that reaches `nixos-unstable`, pi moves back there (see `flake.nix`).
+- **pi** comes from nixpkgs `master`, for pi 1.0 (`nixos-unstable` still has 0.99).
+  Once 1.0 reaches `nixos-unstable`, pi moves back there (see `flake.nix`).
   rtk's pi extension is installed at `~/.pi/agent/extensions/rtk.ts`.
 - **Claude Code** comes from `nixos-unstable`, with its auto-updater turned off. Log in with a
   Pro/Max/Team subscription. The pi provider runs `claude` under the hood and uses the same login.
@@ -290,7 +289,6 @@ For `gh`, run `gh auth login --git-protocol ssh --skip-ssh-key` once per account
   `glow file.md` renders markdown in the terminal instead.
 - Some add-ons install through their own tooling, via the template's `make agents/setup`:
   plannotator's pi extension, the Claude Code provider for pi,
-  [pi-mcp-adapter](https://pi.dev/packages/pi-mcp-adapter) (MCP servers as pi tools),
   [pi-subagents](https://pi.dev/packages/pi-subagents) (delegation to sub-agents),
   [rpiv-ask-user-question](https://pi.dev/packages/@juicesharp/rpiv-ask-user-question)
   (structured questions instead of guesses),
@@ -313,24 +311,27 @@ For `gh`, run `gh auth login --git-protocol ssh --skip-ssh-key` once per account
 
 ### MCP servers and OAuth
 
-`devEnv.mcp` writes pi-mcp-adapter config. Global servers go in `~/.config/mcp/mcp.json`.
-A scope such as `"github.com/some-org"` writes `~/source/github.com/some-org/.mcp.json`, and
-`settings.ancestorConfigRoots` is set to your home directory, so pi loads it in every repo below it. (With the
-scope's own directory as the root, the adapter prints a warning several times on every start
-outside it.) This also means pi reads any `.mcp.json` in a directory between `~` and the cwd,
-not just the cwd's own.
-Pi-only fields (`oauth`, and `disabled` flags for global servers in a scope with
-`inheritGlobal = false`) go in the scope's `.pi/mcp.json`, so `.mcp.json` stays in the shared
-format.
+pi has [MCP built in](https://pi.dev/docs/latest/mcp), but it only reads
+`~/.pi/agent/mcp.json` and the cwd's `.pi/mcp.json`: nothing per org. So `devEnv.mcp` writes
+every server to one file (`~/.config/dev-env/mcp.json`), and a small pi extension
+(`~/.pi/agent/extensions/dev-env-mcp.ts`) registers the ones that apply where the session
+runs: the global servers, plus a scope's such as `"github.com/some-org"` in any directory
+below `~/source/github.com/some-org` or its `wt` worktrees. With `inheritGlobal = false`
+only the scope's servers are registered there.
 
-By default the adapter's OAuth callback listens on a random localhost port, which a browser on
-the host can't reach. A server with `oauth = true` gets
-`redirectUri = http://127.0.0.1:<callbackPort>/callback`, and `make vm/ssh` forwards that port
-(`MCP_OAUTH_PORT`), so signing in from the Mac's browser just works. Only one pi process can
-hold the port at a time. For servers added any other way, copy the failed
-`localhost:…/callback?code=…` URL from the browser and paste it into pi (`/mcp-auth` offers
-this). The generated files are read-only store links: add servers in Nix, not with
-`/mcp setup`. Put secrets in `"${VAR}"` and export them with `devEnv.secrets`.
+`~/.pi/agent/mcp.json` is left to pi (`pi mcp add`, enabling and disabling in `/mcp`), and a
+server defined there wins over a registered one with the same name. `/mcp` inside pi lists the
+registered servers, signs in and reconnects; the shell's `pi mcp list` doesn't load extensions,
+so it doesn't show them. Enabling, disabling or changing exposure of a registered server in
+`/mcp` lasts for the session; set `enabled` or `exposure` on the server in Nix to keep it.
+
+pi's OAuth callback listens on a random localhost port by default, which a browser on the host
+can't reach. A server with `oauth = true` gets `oauth.callbackPort = <callbackPort>`, and
+`make vm/ssh` forwards that port (`MCP_OAUTH_PORT`), so signing in from the Mac's browser just
+works. Only one pi process can hold the port at a time. For other servers, paste the failed
+`127.0.0.1:…/callback?code=…` URL from the browser into pi's sign-in screen. Tokens are kept in
+`~/.pi/agent/mcp-auth.json`, per server name and URL. Put secrets in `"${VAR}"` and export
+them with `devEnv.secrets`; pi expands them when it connects.
 
 ### Prebuilt binaries and nix-ld
 

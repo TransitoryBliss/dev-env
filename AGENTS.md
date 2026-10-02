@@ -55,7 +55,7 @@ it (see below).
 | `modules/home/backup.nix` | `devEnv.backup`: opt-in restic backup of agent sessions, selected per session folder by recorded cwd (`agent-sessions-select`); also sets Claude Code's `cleanupPeriodDays`. Enables user lingering from `modules/nixos/default.nix`. |
 | `modules/home/secrets.nix` | `devEnv.secrets`: sops-nix, exports decrypted secrets from `.zshenv`, globally and per `host/owner` scope (re-checked on `cd`). |
 | `modules/home/notes/` | `devEnv.notes`: `note.sh` (the `note` CLI; the wrapper in `default.nix` bakes in `NOTES_DIR`/`NOTES_REPO`), `idea`/`todo` shorthands, and `skill/SKILL.md`, linked into `~/.agents/skills/notes` and `~/.claude/skills/notes`. |
-| `modules/home/mcp.nix` | `devEnv.mcp`: MCP servers for pi, global and per `host/owner` scope (via `ancestorConfigRoots` = the home directory, absolute since a bare `~` is rejected: per-scope roots make the adapter warn outside them), fixed OAuth callback port. |
+| `modules/home/mcp.nix` | `devEnv.mcp`: MCP servers for pi, global and per `host/owner` scope, fixed OAuth callback port. Writes one JSON file; `mcp-pi.ts` (linked as `~/.pi/agent/extensions/dev-env-mcp.ts`) registers the servers for the session's cwd with `pi.registerMcpServer()`, since pi's built-in MCP only reads `~/.pi/agent/mcp.json` and `<cwd>/.pi/mcp.json`. |
 
 - **Unfree packages:** add names to `devEnv.unfreePackages`. Don't set
   `nixpkgs.config.allowUnfreePredicate` anywhere else; two definitions of a function don't merge.
@@ -166,8 +166,16 @@ commit its `flake.lock`.
   whether those includes apply during `git clone`, and the URL rewrite works for every tool.
   Name and email come from `includeIf "hasconfig:remote.*.url:…"` and `gitdir:` includes.
   Files included via `hasconfig` must not contain remote URLs.
-- **pi** comes from `nixpkgs-master`, because pi-claude-code-provider needs pi ≥ 0.86.1. Move it
-  back to `nixpkgs-unstable` (and drop the input) once unstable has it. **Claude Code** comes
+- **pi** comes from `nixpkgs-master`, for pi 1.0 (unstable has 0.99.2). Move it back to
+  `nixpkgs-unstable` (and drop the input) once unstable has 1.0.
+- **MCP is pi's built-in support, not pi-mcp-adapter.** Any extension that registers `/mcp`
+  (the adapter does) turns the built-in support off: pi then ignores `mcp.json` and registered
+  servers. `agents/setup` removes the adapter from older setups. Per-org scopes can't be files:
+  pi reads only `~/.pi/agent/mcp.json` and the cwd's `.pi/mcp.json` (after project trust), and
+  a server in `mcp.json` overrides a registered one of the same name, so `inheritGlobal = false`
+  only works if the global servers are registered too, not written to `mcp.json`. Leave
+  `~/.pi/agent/mcp.json` to pi; `/mcp` writes enable/exposure changes into it. Registered
+  servers are also invisible to the shell's `pi mcp list` (no extensions there). **Claude Code** comes
   from `nixpkgs-unstable`, imported with its own `allowUnfreePredicate`: `legacyPackages`
   ignores the system's unfree setting.
 - **rtk's pi extension** is fetched from an rtk release tag, because nixpkgs' rtk predates
@@ -335,7 +343,7 @@ commit its `flake.lock`.
   current directory); `pi -p --session` refuses with "Stored session working directory does
   not exist".
   **`wt task`** (end of `wt.zsh`): one org only; the task folder is
-  `$_WT_ROOT/<host>/<owner>/.tasks/<name>/`, so the org's scope files (`.mcp.json`) apply, and
+  `$_WT_ROOT/<host>/<owner>/.tasks/<name>/`, so the org's scopes (MCP servers, secrets) apply, and
   pi reads the generated `AGENTS.md` from its cwd (no project trust needed); repo agents are
   told its path, since their cwd is the worktree.
   - **Owner:** the pi session that runs `wt task` (the extension passes its session id as

@@ -1,4 +1,4 @@
-# devEnv.mcp: MCP servers for pi (pi-mcp-adapter), everywhere and per org.
+# devEnv.mcp: MCP servers for pi (its built-in MCP support), everywhere and per org.
 #
 #   devEnv.mcp = {
 #     servers.context7.url = "https://mcp.context7.com/mcp";
@@ -8,30 +8,27 @@
 #     };
 #   };
 #
-# `servers` go in ~/.config/mcp/mcp.json. A scope's servers go in
-# <root>/<host/owner>/.mcp.json for each devEnv.scopeRoots (~/source and the
-# worktree root `wt` mirrors it into). settings.ancestorConfigRoots is the home
-# directory, so pi also reads .mcp.json files in the directories between ~ and
-# the cwd, and loads a scope's file anywhere below it (repos included; a repo's
-# own .mcp.json still wins). The root is ~ rather than each scope's directory
-# because pi-mcp-adapter warns, several times per start, about every root that
-# doesn't contain the cwd. Pi-only fields (oauth, and the `disabled` flags that
-# hide global servers) go in the scope's .pi/mcp.json, so .mcp.json stays in
-# the format other tools read.
+# pi reads ~/.pi/agent/mcp.json and the cwd's .pi/mcp.json (trusted projects
+# only), nothing per org. So the servers go in one generated file, and the
+# mcp-pi.ts extension registers (pi.registerMcpServer) the ones that apply to
+# the session's directory: the global servers, plus a scope's when the cwd is
+# under <host/owner> in one of devEnv.scopeRoots (~/source, and the worktree
+# root `wt` mirrors it into). With inheritGlobal = false only the scope's.
 #
-# OAuth: pi-mcp-adapter's callback listens on a random port unless the server
-# has a fixed redirectUri. `oauth = true` sets one on callbackPort, which
-# `make vm/ssh` forwards, so a browser on the host can finish the flow.
+# ~/.pi/agent/mcp.json stays pi's own (`pi mcp add`, /mcp toggles), and a
+# server defined there wins over a registered one of the same name. Registered
+# servers don't show in the shell's `pi mcp list` (it loads no extensions);
+# /mcp inside pi lists them, signs in and reconnects.
 #
-# The files are read-only store links: add servers here, not with
-# `/mcp setup` or `mcp install` into them. ~/.pi/agent/mcp.json is left alone
-# for pi's own writes. Secrets: use "${VAR}" in env/headers with devEnv.secrets.
+# OAuth: pi's callback listens on a random port unless the server has a fixed
+# one. `oauth = true` sets callbackPort, which `make vm/ssh` forwards, so a
+# browser on the host can finish the flow. Secrets: use "${VAR}" in env/headers
+# with devEnv.secrets; pi expands them when it connects.
 { config, lib, pkgs, ... }:
 
 let
   cfg = config.devEnv.mcp;
   jsonFormat = pkgs.formats.json { };
-  redirectUri = "http://127.0.0.1:${toString cfg.callbackPort}/callback";
 
   serverType = lib.types.submodule {
     freeformType = jsonFormat.type;
@@ -39,8 +36,8 @@ let
       type = lib.types.either lib.types.bool (lib.types.attrsOf jsonFormat.type);
       default = false;
       description = ''
-        Browser OAuth on the fixed callback port. `true`, or pi-mcp-adapter
-        `oauth` settings (clientId, scope, ...) to merge over the redirectUri.
+        Browser OAuth on the fixed callback port. `true`, or pi `oauth` settings
+        (clientId, scope, clientName, ...) to merge over the callbackPort.
       '';
     };
   };
@@ -55,22 +52,26 @@ let
       inheritGlobal = lib.mkOption {
         type = lib.types.bool;
         default = true;
-        description = "Whether devEnv.mcp.servers are also loaded here. false disables them in this scope.";
+        description = "Whether devEnv.mcp.servers are also loaded here. false leaves them out in this scope.";
       };
     };
   };
 
-  # The server as other MCP clients know it, and pi's additions to it.
-  standard = server: removeAttrs server [ "oauth" ];
-  piOverlay = server:
-    if server.oauth == false then { }
-    else { oauth = { inherit redirectUri; } // lib.optionalAttrs (lib.isAttrs server.oauth) server.oauth; };
+  # An `mcpServers` entry as pi takes it.
+  piServer = server:
+    removeAttrs server [ "oauth" ]
+    // lib.optionalAttrs (server.oauth != false) {
+      oauth = { inherit (cfg) callbackPort; } // lib.optionalAttrs (lib.isAttrs server.oauth) server.oauth;
+    };
 
-  full = server: standard server // piOverlay server;
-
-  scopePiServers = scope:
-    lib.optionalAttrs (!scope.inheritGlobal) (lib.mapAttrs (_: _: { disabled = true; }) cfg.servers)
-    // lib.filterAttrs (_: v: v != { }) (lib.mapAttrs (_: piOverlay) scope.servers);
+  serversFile = jsonFormat.generate "dev-env-mcp.json" {
+    roots = config.devEnv.scopeRoots;
+    servers = lib.mapAttrs (_: piServer) cfg.servers;
+    scopes = lib.mapAttrs (_: scope: {
+      inherit (scope) inheritGlobal;
+      servers = lib.mapAttrs (_: piServer) scope.servers;
+    }) cfg.scopes;
+  };
 
   enabled = cfg.servers != { } || cfg.scopes != { };
 in
@@ -84,7 +85,7 @@ in
     servers = lib.mkOption {
       type = lib.types.attrsOf serverType;
       default = { };
-      description = "MCP servers loaded everywhere, as .mcp.json `mcpServers` entries plus `oauth`.";
+      description = "MCP servers loaded everywhere, as `mcpServers` entries plus `oauth`.";
     };
     scopes = lib.mkOption {
       type = lib.types.attrsOf scopeType;
@@ -94,27 +95,9 @@ in
   };
 
   config = lib.mkIf enabled {
-    xdg.configFile."mcp/mcp.json".source = jsonFormat.generate "mcp.json" {
-      mcpServers = lib.mapAttrs (_: full) cfg.servers;
-      # Absolute: the adapter accepts "~/..." but not a bare "~".
-      settings.ancestorConfigRoots = lib.optionals (cfg.scopes != { }) [ config.home.homeDirectory ];
-    };
-
-    # Under every scope root: ~/source, and the worktree root `wt` mirrors it into.
-    home.file = lib.concatMapAttrs (owner: scope: lib.mergeAttrsList (map (root:
-      let dir = lib.removePrefix "${config.home.homeDirectory}/" "${root}/${owner}"; in {
-        "${dir}/.mcp.json".source = jsonFormat.generate "mcp.json" {
-          mcpServers = lib.mapAttrs (_: standard) scope.servers;
-        };
-        "${dir}/.pi/mcp.json".source = jsonFormat.generate "pi-mcp.json" {
-          mcpServers = scopePiServers scope;
-        };
-      }) config.devEnv.scopeRoots)) cfg.scopes;
-
-    # Used for servers with a pre-registered clientId; kept in step with callbackPort.
-    home.sessionVariables.MCP_OAUTH_CALLBACK_PORT = toString cfg.callbackPort;
-    programs.zsh.envExtra = ''
-      export MCP_OAUTH_CALLBACK_PORT=${toString cfg.callbackPort}
-    '';
+    # The extension reads its store path; the link is for people looking.
+    xdg.configFile."dev-env/mcp.json".source = serversFile;
+    home.file.".pi/agent/extensions/dev-env-mcp.ts".source =
+      pkgs.replaceVars ./mcp-pi.ts { inherit serversFile; };
   };
 }

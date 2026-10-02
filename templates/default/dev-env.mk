@@ -44,7 +44,6 @@ PLAYWRIGHT_CLI = 0.1.19
 PI_PACKAGES = \
 	@plannotator/pi-extension@0.27.19 \
 	pi-claude-code-provider@0.5.0 \
-	pi-mcp-adapter@2.37.0 \
 	pi-subagents@0.71.0 \
 	@juicesharp/rpiv-ask-user-question@2.11.0 \
 	pi-playwright@0.1.2 \
@@ -260,6 +259,11 @@ switch:
 agents/setup:
 	@test -d ~/.claude || { echo "Run 'claude' once and log in first, then re-run make agents/setup."; exit 1; }
 	for p in $(PI_PACKAGES); do pi install npm:$$p || exit 1; done
+	@# pi has MCP built in since 0.99 (devEnv.mcp registers the servers), and an
+	@# extension that owns /mcp, like pi-mcp-adapter, turns it off. Remove the
+	@# adapter from earlier setups, and the cache files it left behind.
+	@if pi list 2>/dev/null | grep -q 'npm:pi-mcp-adapter'; then pi remove npm:pi-mcp-adapter || exit 1; fi
+	rm -f ~/.pi/agent/mcp-cache.json ~/.pi/agent/mcp-onboarding.json
 	@# pi-playwright depends on @playwright/cli by a range, and every release of
 	@# that pins a playwright-core which accepts exactly one Chromium revision.
 	@# The browsers come from Nix, so the CLI is held at the release that matches

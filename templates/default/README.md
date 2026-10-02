@@ -142,7 +142,7 @@ After that, `make switch` inside WSL rebuilds; it picks the host from the hostna
    Check them with `ssh -T git@github.com`.
 2. Run `claude` and log in (open the link it prints in your browser). `make agents/setup` needs this first.
 3. `make agents/setup` installs the agent add-ons that use their own installers
-   (plannotator's pi extension, the Claude Code provider for pi, the pi MCP adapter,
+   (plannotator's pi extension, the Claude Code provider for pi,
    pi-subagents, rpiv-ask-user-question, pi-playwright, pi-web-access, rtk's Claude Code hook,
    herdr-annotate, herdr-ohmyzsh). It starts a background herdr server if none is running.
    Until it has run, each new shell prints `[oh-my-zsh] plugin 'herdr' not found`.

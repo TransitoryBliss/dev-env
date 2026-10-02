@@ -175,7 +175,7 @@ in
   config = {
     assertions = [{
       assertion = lib.hasPrefix "${home}/" cfg.worktreeRoot;
-      message = "devEnv.git.worktreeRoot must be under ${home}: scope files are placed there with home.file.";
+      message = "devEnv.git.worktreeRoot must be under ${home}.";
     }];
 
     home.packages = [ pkgs.ghq devenvKeys wtBin ];
