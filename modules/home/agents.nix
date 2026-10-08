@@ -8,6 +8,14 @@ let
   };
   master = inputs.nixpkgs-master.legacyPackages.${pkgs.stdenv.hostPlatform.system};
 
+  # Claude Code releases faster than nixos-unstable, so this is unstable's
+  # package with our own release manifest (pkgs/claude-code, bumped with its
+  # update.sh). Bumping the unstable input instead would also move the
+  # Playwright browsers, which must match the pinned @playwright/cli.
+  claudeCode = unstable.claude-code.override {
+    manifest = lib.importJSON ../../pkgs/claude-code/manifest.zst.json;
+  };
+
   # rtk's pi extension shipped after the rtk in nixpkgs, but it only shells out
   # to `rtk rewrite` (rtk >= 0.23), so the packaged binary works with it.
   rtkPiHookVersion = "v0.49.0";
@@ -48,7 +56,7 @@ in
 {
   home.packages = [
     master.pi-coding-agent
-    unstable.claude-code
+    claudeCode
     pkgs.rtk
     herdr
     plannotator

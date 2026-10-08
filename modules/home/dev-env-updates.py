@@ -8,7 +8,8 @@ Checks
   - herdr plugins (`herdr plugin list`): tags against the latest release,
     commits against the default branch
   - what the Nix config pins (plannotator, pi-session-manager, herdr, rtk's pi
-    hook) against GitHub releases, and pi and Claude Code against npm
+    hook) against GitHub releases, pi against npm, and Claude Code against its
+    release server (what pkgs/claude-code/update.sh pins; npm's tag can lag it)
   - the \u0040playwright/cli override, which must match Nix's Chromium
   - the base's GitHub flake inputs against their branch: OLD when newer
     commits exist and the locked one is over STALE_DAYS old (nixpkgs always
@@ -68,6 +69,12 @@ def behind(repo, sha, ref="HEAD"):
 
 def npm_latest(name):
     return safe(lambda: get_json("https://registry.npmjs.org/" + name.replace("/", "%2F") + "/latest")["version"])
+
+
+def claude_latest():
+    req = urllib.request.Request("https://downloads.claude.ai/claude-code-releases/latest",
+                                 headers={"User-Agent": "dev-env-updates"})
+    return safe(lambda: urllib.request.urlopen(req, timeout=20).read().decode().strip())
 
 
 def run(*cmd):
@@ -139,7 +146,7 @@ def main():
     pi_ver = run("pi", "--version").strip().splitlines()[-1:] or [""]
     add("nix", "pi", pi_ver[0], npm_latest("\u0040earendil-works/pi-coding-agent"), "nixpkgs-master")
     claude = re.search(r"[\d.]+", run("claude", "--version"))
-    add("nix", "claude-code", claude.group(0) if claude else None, npm_latest("\u0040anthropic-ai/claude-code"), "nixpkgs-unstable")
+    add("nix", "claude-code", claude.group(0) if claude else None, claude_latest(), "pkgs/claude-code/update.sh")
 
     # \u0040playwright/cli override (PLAYWRIGHT_CLI)
     try:

@@ -48,6 +48,7 @@ it (see below).
 | `templates/default/` | The private-config template. `dev-env.mk` is the shared Makefile (configs commit a copy); `Makefile` only sets `NIXUSER`/`VM_HOST` and includes it. |
 | `templates/sync-example.sh` | Renders the template into a dev-env-example checkout (`--check`: report drift). |
 | `pkgs/plannotator.nix` | Prebuilt binary per architecture. |
+| `pkgs/claude-code/` | Release manifest for nixpkgs' Claude Code package. `update.sh [version]` pins the newest (or a given) release. |
 | `pkgs/pi-session-manager/` | Built from source, with our `Cargo.lock` and `security.patch`. |
 | `modules/nixos/proxy.nix` | `devEnv.proxy`: Caddy as a systemd user service (`devproxy`) on one localhost port, plus `devproxy-watch`, which routes services it finds as `<name>.<machine>.localhost`. |
 | `modules/nixos/devproxy.py` | The watcher and `devproxy` CLI: discovery, naming, Caddy's whole config, pushed over the admin Unix socket. |
@@ -167,9 +168,12 @@ commit its `flake.lock`.
   Name and email come from `includeIf "hasconfig:remote.*.url:…"` and `gitdir:` includes.
   Files included via `hasconfig` must not contain remote URLs.
 - **pi** comes from `nixpkgs-master`, for pi 1.0 (unstable has 0.99.2). Move it back to
-  `nixpkgs-unstable` (and drop the input) once unstable has 1.0. **Claude Code** comes
-  from `nixpkgs-unstable`, imported with its own `allowUnfreePredicate`: `legacyPackages`
-  ignores the system's unfree setting.
+  `nixpkgs-unstable` (and drop the input) once unstable has 1.0. **Claude Code** is
+  `nixpkgs-unstable`'s package with our own release manifest (`pkgs/claude-code/`, bumped with
+  its `update.sh`), so it can be newer than unstable without moving the input, which also pins
+  the Playwright browsers. After bumping `nixpkgs-unstable`, check that its `claude-code`
+  still takes a `manifest` argument. It's imported with its own `allowUnfreePredicate`:
+  `legacyPackages` ignores the system's unfree setting.
 - **Claude in pi is pi-claude-bridge** (Agent SDK), not pi-claude-code-provider (mothballed
   after 0.6.0). `agents/setup` merges `provider.plan` (`CLAUDE_PLAN`) and
   `provider.pathToClaudeCodeExecutable` (Nix's `claude`, not the SDK's bundled binary) into

@@ -184,7 +184,8 @@ For `gh`, run `gh auth login --git-protocol ssh --skip-ssh-key` once per account
 - **pi** comes from nixpkgs `master`, for pi 1.0 (`nixos-unstable` still has 0.99).
   Once 1.0 reaches `nixos-unstable`, pi moves back there (see `flake.nix`).
   rtk's pi extension is installed at `~/.pi/agent/extensions/rtk.ts`.
-- **Claude Code** comes from `nixos-unstable`, with its auto-updater turned off. Log in with a
+- **Claude Code** is `nixos-unstable`'s package pinned to a newer release
+  (`pkgs/claude-code/update.sh`), with its auto-updater turned off. Log in with a
   Pro/Max/Team subscription. The pi provider runs `claude` under the hood and uses the same login.
 - **herdr** comes from its own flake, pinned by tag in `flake.nix`.
 - **plannotator** is a prebuilt release per architecture, in `pkgs/plannotator.nix`. Bump
