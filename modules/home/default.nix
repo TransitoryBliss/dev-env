@@ -7,6 +7,17 @@ let
   # ZSH_CUSTOM at a writable directory instead: `herdr plugin install`
   # symlinks the herdr plugin into $ZSH_CUSTOM/plugins (see `agents/setup`).
   zshCustom = "${config.xdg.dataHome}/oh-my-zsh-custom";
+
+  # macOS: /etc/zprofile's path_helper puts /usr/bin first, and shells nested
+  # in herdr skip Determinate's hook in /etc/zshrc (they inherit
+  # __ETC_PROFILE_NIX_SOURCED), so Apple's git and Homebrew would win. .zshrc
+  # puts the Nix profiles in front twice: before Oh My Zsh, whose plugins
+  # (direnv, ...) look for their tools as they load, and last, after anything
+  # else .zshrc adds.
+  nixFirstOnPath = ''
+    path=(${config.home.profileDirectory}/bin /nix/var/nix/profiles/default/bin $path)
+    typeset -U path
+  '';
 in
 {
   imports = [
@@ -82,7 +93,11 @@ in
       # order 1000, after Oh My Zsh at 800, it also wins. Both the normal and
       # application-mode escape sequences are bound, plus whatever terminfo
       # reports, since terminals send either.
-      initContent = lib.mkMerge [ ''
+      initContent = lib.mkMerge [
+      # Before Oh My Zsh (order 800); see nixFirstOnPath.
+      (lib.mkIf pkgs.stdenv.isDarwin (lib.mkOrder 500 nixFirstOnPath))
+
+      ''
         autoload -U up-line-or-beginning-search down-line-or-beginning-search
         zle -N up-line-or-beginning-search
         zle -N down-line-or-beginning-search
@@ -108,14 +123,8 @@ in
         }
       ''
 
-      # macOS: /etc/zprofile's path_helper puts /usr/bin first, and shells
-      # nested in herdr skip Determinate's hook in /etc/zshrc (they inherit
-      # __ETC_PROFILE_NIX_SOURCED), so Apple's git and Homebrew would win. Put
-      # the Nix profiles back in front, last, after anything else .zshrc adds.
-      (lib.mkIf pkgs.stdenv.isDarwin (lib.mkOrder 2000 ''
-        path=(${config.home.profileDirectory}/bin /nix/var/nix/profiles/default/bin $path)
-        typeset -U path
-      ''))
+      # And last, after anything else .zshrc adds; see nixFirstOnPath.
+      (lib.mkIf pkgs.stdenv.isDarwin (lib.mkOrder 2000 nixFirstOnPath))
       ];
     };
 

@@ -116,6 +116,18 @@ lib.runTests {
     expr = lastLine ex.programs.zsh.initContent;
     expected = "typeset -U path";
   };
+  # Also before Oh My Zsh: in nested shells its plugins (direnv, ...) look for
+  # their tools while Nix isn't on PATH yet.
+  testPathFixBeforeOhMyZsh = {
+    expr =
+      let
+        s = ex.programs.zsh.initContent;
+        idx = re: builtins.stringLength (builtins.head (builtins.split re s));
+        omz = idx "oh-my-zsh[.]sh";
+      in
+      idx "/nix/var/nix/profiles/default/bin [$]path" < omz && omz < builtins.stringLength s;
+    expected = true;
+  };
   testPathFixDarwinOnly = {
     expr = lib.hasInfix "/nix/var/nix/profiles/default/bin \$path" vmHome.programs.zsh.initContent;
     expected = false;
