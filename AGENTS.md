@@ -207,6 +207,8 @@ commit its `flake.lock`.
 - **rtk rewrites shell commands** in pi's bash tool: it reformats `diff` output (no `<`/`>`
   lines, "Files are identical" for different files) and mangles `;;` in `case`. Compare with
   `cmp` or a script, and put `case` in a script file.
+  The same goes for Claude Code through rtk's hook (`git log` cut short, `ok` for
+  `git commit`, summarised `grep`/`ls`); a config can drop it with `RTK = no` in `Makefile.local`.
 - **MCP is pi's built-in support, not pi-mcp-adapter.** Any extension that registers `/mcp`
   (the adapter does) turns the built-in support off: pi then ignores `mcp.json` and registered
   servers. `agents/setup` removes the adapter from older setups. Per-org scopes can't be files:

@@ -75,6 +75,11 @@ PI_PACKAGES_REMOVED = npm:pi-mcp-adapter npm:pi-claude-code-provider npm:pi-suba
 # Premium or Enterprise (Opus with 1M context). Set it in Makefile.local.
 CLAUDE_PLAN ?= pro
 
+# rtk's Claude Code hook, which rewrites Claude's shell commands so their output
+# is shorter. `agents/setup` installs it; with `RTK = no` in Makefile.local it
+# removes it instead (hook, RTK.md and the @RTK.md line in ~/.claude/CLAUDE.md).
+RTK ?= yes
+
 BASE_DIR = .cache/dev-env-base
 ifneq ($(DEV_ENV),)
 # From the Mac, DEV_ENV is synced to BASE_DIR in the VM; inside the machine it's used as is.
@@ -319,7 +324,11 @@ agents/setup:
 	@rev=$$(node -p 'require("$(HOME)/.pi/agent/npm/node_modules/pi-playwright/node_modules/playwright-core/browsers.json").browsers.find(b => b.name === "chromium").revision' 2>/dev/null); \
 		test -z "$$PLAYWRIGHT_BROWSERS_PATH" || test -d "$$PLAYWRIGHT_BROWSERS_PATH/chromium-$$rev" \
 		|| echo "warning: @playwright/cli $(PLAYWRIGHT_CLI) wants chromium-$$rev, which is not in $$PLAYWRIGHT_BROWSERS_PATH; move the PLAYWRIGHT_CLI pin"
+ifeq ($(RTK),no)
+	rtk init -g --uninstall
+else
 	rtk init -g --auto-patch
+endif
 	@# herdr plugin commands talk to the herdr server; start one in the background if needed.
 	@herdr plugin list >/dev/null 2>&1 || { \
 		echo "Starting herdr server"; nohup herdr server >/dev/null 2>&1 & \

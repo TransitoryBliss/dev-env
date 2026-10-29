@@ -299,7 +299,8 @@ For `gh`, run `gh auth login --git-protocol ssh --skip-ssh-key` once per account
   [pi-web-access](https://pi.dev/packages/pi-web-access) (web search and fetching),
   [pi-playwright](https://pi.dev/packages/pi-playwright) (a browser through `@playwright/cli`,
   on hosts with `devEnv.languages.playwright.enable`; `agents/setup` pins its CLI to the
-  release matching the Chromium from Nix), rtk's Claude Code hook (`rtk init -g`), and the
+  release matching the Chromium from Nix), rtk's Claude Code hook (`rtk init -g`; `RTK = no` in
+  `Makefile.local` removes it instead), and the
   [herdr-annotate](https://github.com/plannotator/herdr-annotate) and
   [herdr-ohmyzsh](https://github.com/robbyrussell/herdr-ohmyzsh) herdr plugins. The latter adds
   `hsplit`/`htab`/`hagent`/`hworktree`/`hreload`, shows commands slower than 10s in herdr's

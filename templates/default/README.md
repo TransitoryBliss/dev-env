@@ -173,6 +173,8 @@ and fail the build if enabled. Docker isn't included: use Docker Desktop or OrbS
    pi-subagents, rpiv-ask-user-question, pi-playwright, pi-web-access, rtk's Claude Code hook,
    herdr-annotate, herdr-ohmyzsh). It starts a background herdr server if none is running.
    Until it has run, each new shell prints `[oh-my-zsh] plugin 'herdr' not found`.
+   rtk's hook rewrites Claude's shell commands so their output is shorter; to do without it,
+   set `RTK = no` in `Makefile.local` and `agents/setup` removes it instead.
 4. Run `pi` and pick a model with `/model`, e.g. `claude-bridge/claude-opus-5-5`; the bridge uses
    your `claude` login. On a Max plan, set `CLAUDE_PLAN = max` in `Makefile.local` first.
 5. Start `nvim` once. lazy.nvim bootstraps itself, installs the plugins and compiles the
