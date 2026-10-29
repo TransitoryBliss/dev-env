@@ -82,7 +82,7 @@ in
       # order 1000, after Oh My Zsh at 800, it also wins. Both the normal and
       # application-mode escape sequences are bound, plus whatever terminfo
       # reports, since terminals send either.
-      initContent = ''
+      initContent = lib.mkMerge [ ''
         autoload -U up-line-or-beginning-search down-line-or-beginning-search
         zle -N up-line-or-beginning-search
         zle -N down-line-or-beginning-search
@@ -106,7 +106,17 @@ in
           bindkey -M vicmd k up-line-or-beginning-search
           bindkey -M vicmd j down-line-or-beginning-search
         }
-      '';
+      ''
+
+      # macOS: /etc/zprofile's path_helper puts /usr/bin first, and shells
+      # nested in herdr skip Determinate's hook in /etc/zshrc (they inherit
+      # __ETC_PROFILE_NIX_SOURCED), so Apple's git and Homebrew would win. Put
+      # the Nix profiles back in front, last, after anything else .zshrc adds.
+      (lib.mkIf pkgs.stdenv.isDarwin (lib.mkOrder 2000 ''
+        path=(${config.home.profileDirectory}/bin /nix/var/nix/profiles/default/bin $path)
+        typeset -U path
+      ''))
+      ];
     };
 
     # Oh My Zsh reads ZSH_CUSTOM from .zshrc, which only interactive shells

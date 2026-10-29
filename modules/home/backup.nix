@@ -146,10 +146,16 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    assertions = [{
-      assertion = config.devEnv.secrets.sopsFile != null;
-      message = "devEnv.backup needs devEnv.secrets.sopsFile: the repository and its password come from it.";
-    }];
+    assertions = [
+      {
+        assertion = config.devEnv.secrets.sopsFile != null;
+        message = "devEnv.backup needs devEnv.secrets.sopsFile: the repository and its password come from it.";
+      }
+      {
+        assertion = !pkgs.stdenv.isDarwin;
+        message = "devEnv.backup is Linux-only for now (it runs as a systemd user timer).";
+      }
+    ];
 
     sops.secrets = lib.genAttrs secretNames (_: { });
 

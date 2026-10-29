@@ -16,6 +16,25 @@ let
 
   # An unfree package, to check that devEnv.unfreePackages reaches the Mac's pkgs.
   unfree = { devEnv.user.home = { pkgs, ... }: { home.packages = [ pkgs._1password-cli ]; }; };
+
+  # The same template user on NixOS, to check that macOS fixes stay macOS-only.
+  vmHome = self.nixosConfigurations.example-vm.config.home-manager.users.me;
+  lastLine = s: lib.last (lib.splitString "\n" (lib.trim s));
+  # Whether a home module, enabled on macOS, has a failing assertion whose message
+  # starts with `prefix`. The module is called directly: home-manager throws on a
+  # failed assertion before its message can be read, and tryEval hides messages.
+  # Its config must be `lib.mkIf cfg.enable { ... }`.
+  failsOnMac = file: option: prefix:
+    let
+      module = import file {
+        inherit lib;
+        pkgs = self.inputs.nixpkgs.legacyPackages.aarch64-darwin;
+        config = lib.recursiveUpdate (lib.setAttrByPath [ "devEnv" option "enable" ] true) {
+          home.homeDirectory = "/Users/me";
+        };
+      };
+    in
+    lib.any (a: lib.hasPrefix prefix a.message && !a.assertion) (module.config.content.assertions or [ ]);
 in
 lib.runTests {
   testUsername = {
@@ -73,6 +92,40 @@ lib.runTests {
   };
   testExampleEvaluates = {
     expr = lib.hasSuffix "home-manager-generation.drv" (drvPath self.homeConfigurations.example-mac);
+    expected = true;
+  };
+
+  # homeModules.default on macOS.
+  testWtGcInterval = {
+    expr = ex.launchd.agents.wt-gc.config.StartInterval or null;
+    expected = 3600;
+  };
+  testWtGcArgs = {
+    expr = lib.last (ex.launchd.agents.wt-gc.config.ProgramArguments or [ null ]);
+    expected = "--auto";
+  };
+  testMdNoXdgOpen = {
+    expr = lib.hasInfix "xdg-open" ex.programs.zsh.initContent;
+    expected = false;
+  };
+  testMdLinuxUnchanged = {
+    expr = lib.hasInfix "xdg-open" vmHome.programs.zsh.initContent;
+    expected = true;
+  };
+  testPathFixLast = {
+    expr = lastLine ex.programs.zsh.initContent;
+    expected = "typeset -U path";
+  };
+  testPathFixDarwinOnly = {
+    expr = lib.hasInfix "/nix/var/nix/profiles/default/bin \$path" vmHome.programs.zsh.initContent;
+    expected = false;
+  };
+  testPsmLinuxOnly = {
+    expr = failsOnMac ../modules/home/session-manager.nix "sessionManager" "devEnv.sessionManager is Linux-only";
+    expected = true;
+  };
+  testBackupLinuxOnly = {
+    expr = failsOnMac ../modules/home/backup.nix "backup" "devEnv.backup is Linux-only";
     expected = true;
   };
 }

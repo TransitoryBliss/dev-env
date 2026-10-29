@@ -39,6 +39,11 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    assertions = [{
+      assertion = !pkgs.stdenv.isDarwin;
+      message = "devEnv.sessionManager is Linux-only for now (it runs as a systemd user service).";
+    }];
+
     home.packages = [ psm ];
 
     # pi loads a directory whose package.json declares pi.extensions.

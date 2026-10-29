@@ -228,6 +228,15 @@ in
       };
       Install.WantedBy = [ "timers.target" ];
     };
+    # macOS has no systemd (home-manager skips the units above there): launchd
+    # runs the same script hourly instead.
+    launchd.agents.wt-gc = lib.mkIf pkgs.stdenv.isDarwin {
+      enable = true;
+      config = {
+        ProgramArguments = [ "${wtGc}" "--auto" ];
+        StartInterval = 3600;
+      };
+    };
 
     home.activation.wtHerdrPlugin = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
       run mkdir -p ${lib.escapeShellArg wtPluginDir}

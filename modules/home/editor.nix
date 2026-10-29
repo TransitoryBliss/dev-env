@@ -31,8 +31,9 @@
   # `md [file|dir]`: preview markdown with live reload on a fixed port (6419),
   # with devEnv.proxy at http://md.<machine>.localhost:8090. go-grip's -H only sets the
   # printed URL: it still listens on all interfaces, so the Parallels firewall
-  # is what keeps it private there. It only
-  # tries to open a browser where xdg-open exists (on WSL it opens Windows').
+  # is what keeps it private there. On Linux it only
+  # tries to open a browser where xdg-open exists (on WSL it opens Windows');
+  # on macOS go-grip always opens one, with `open`.
   #
   # Oh My Zsh's lib/directories.zsh defines `alias md='mkdir -p'`. zsh expands
   # aliases while parsing, so the alias both breaks this definition ("defining
@@ -41,8 +42,8 @@
   programs.zsh.initContent = ''
     unalias md 2>/dev/null
     md() {
-      local open=false
-      command -v xdg-open >/dev/null && open=true
+      local open=${if pkgs.stdenv.isDarwin then "true" else "false"}
+      ${if pkgs.stdenv.isDarwin then "" else "command -v xdg-open >/dev/null && open=true"}
       go-grip -b="$open" -H 127.0.0.1 -p "''${MD_PORT:-6419}" "$@"
     }
   '';
