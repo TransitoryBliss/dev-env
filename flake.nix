@@ -49,6 +49,10 @@
         modules = [ self.nixosModules.default ] ++ modules;
       };
 
+    # The same user and host files as a standalone home-manager config, for a Mac
+    # without a VM. See lib/mk-home.nix.
+    lib.mkHome = import ./lib/mk-home.nix { inherit inputs self; };
+
     templates.default = {
       path = ./templates/default;
       description = "Private config for dev-env: your user and hosts";
@@ -73,5 +77,20 @@
         modules = [ ./templates/default/users/me.nix ./templates/default/hosts/wsl.nix ];
       };
     };
+
+    homeConfigurations.example-mac = self.lib.mkHome {
+      system = "aarch64-darwin";
+      modules = [ ./templates/default/users/me.nix ./templates/default/hosts/mac.nix ];
+    };
+
+    # Evaluation tests for the Mac (tests/mac.nix). On every system, so the Linux
+    # CI catches macOS breakage too; they only evaluate, nothing darwin is built.
+    checks = nixpkgs.lib.genAttrs [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" ] (system:
+      let failures = import ./tests/mac.nix { inherit self; inherit (nixpkgs) lib; };
+      in {
+        mac =
+          if failures == [ ] then nixpkgs.legacyPackages.${system}.writeText "mac-tests" ""
+          else throw "tests/mac.nix failed: ${builtins.toJSON failures}";
+      });
   };
 }

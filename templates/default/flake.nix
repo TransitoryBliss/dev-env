@@ -25,5 +25,13 @@
         modules = [ ./users/me.nix ./hosts/wsl.nix ];
       };
     };
+
+    # The Mac itself, without a VM (home directory only). The name is MAC_HOST in the Makefile.
+    homeConfigurations = {
+      mac = dev-env.lib.mkHome {
+        system = "aarch64-darwin"; # Apple Silicon
+        modules = [ ./users/me.nix ./hosts/mac.nix ];
+      };
+    };
   };
 }
