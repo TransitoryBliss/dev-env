@@ -1,7 +1,8 @@
 # dev-env
 
 A NixOS development environment for AI-assisted coding, packaged as reusable modules.
-It runs as a UTM, Parallels or VMware Fusion VM on a Mac, or under WSL2 on Windows, and gives you:
+It runs as a UTM, Parallels or VMware Fusion VM on a Mac, or under WSL2 on Windows, and gives you
+the following. The home part also runs on a Mac directly, without a VM (see "macOS without a VM").
 
 - **Agents:** [pi](https://github.com/earendil-works/pi) and [Claude Code](https://claude.com/claude-code),
   with [rtk](https://github.com/rtk-ai/rtk) cutting the tokens command output costs, and
@@ -352,10 +353,27 @@ Until that's fixed, trigger capture from the host while text is selected:
 ssh <user>@<vm-ip> herdr plugin action invoke annotate.capture
 ```
 
+### macOS without a VM
+
+`lib.mkHome { system; modules; }` turns the same user and host files `lib.mkHost` takes into a
+standalone home-manager config (`homeConfigurations.<name>` in your private config), applied
+with `make switch` on the Mac. It reads `devEnv.user.name`, `devEnv.user.home`,
+`devEnv.configDir` and `devEnv.unfreePackages`, plus `devEnv.user.homeDirectory`
+(`/Users/<name>` by default). Other `devEnv` settings are ignored, so one user file serves a VM
+and a Mac.
+
+On macOS, `wt gc --auto` runs hourly from launchd instead of a systemd timer, `md` always
+opens the browser, and `.zshrc` ends by moving the Nix profiles to the front of `PATH`:
+`/etc/zprofile`'s `path_helper` puts `/usr/bin` first, and shells nested in herdr skip the
+Nix installer's hook in `/etc/zshrc`. `devEnv.sessionManager` and `devEnv.backup` are
+Linux-only (systemd) and fail the build there.
+
 ## Developing this repo
 
-`nix flake check` evaluates the template's two hosts (`example-vm` and `example-wsl`) against
-this checkout. To try changes on a real machine before publishing, build your private config
+`nix flake check` evaluates the template's hosts (`example-vm`, `example-wsl` and the others)
+against this checkout, and runs `checks.<system>.mac`: evaluation tests for `lib.mkHome` and
+the home module on macOS (`tests/mac.nix`), using `homeConfigurations.example-mac`. They only
+evaluate, so they run on Linux too. To try changes on a real machine before publishing, build your private config
 against a local checkout: `make vm/bootstrap NIXADDR=<ip> DEV_ENV=../dev-env`. With
 `DEV_ENV` set, `make base/sync` inside the machine copies `dev-env.mk` from that checkout.
 

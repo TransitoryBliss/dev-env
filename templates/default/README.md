@@ -136,6 +136,33 @@ The first install renames NixOS-WSL's default user (`nixos`) to yours. NixOS-WSL
 
 After that, `make switch` inside WSL rebuilds; it picks the host from the hostname.
 
+## The Mac itself (no VM)
+
+Instead of a VM, the Mac can run the same user config directly: `homeConfigurations.mac` in
+`flake.nix` is a standalone home-manager config (the base's `lib.mkHome`) that reads
+`users/me.nix` and `hosts/mac.nix`. It only touches your home directory. NixOS-only settings
+(`timeZone`, `proxy`, `sshKeys`) are ignored; `sessionManager` and `backup` are Linux-only
+and fail the build if enabled. Docker isn't included: use Docker Desktop or OrbStack.
+
+1. Install Nix with the [Determinate installer](https://docs.determinate.systems/):
+   `curl -fsSL https://install.determinate.systems/nix | sh -s -- install`.
+2. Clone this repo to `~/dev-env` (the default `devEnv.configDir`). If your macOS login
+   (`whoami`) isn't the name in `users/me.nix`, set it in `hosts/mac.nix`.
+3. `cd ~/dev-env && make switch`. It builds `homeConfigurations.$(MAC_HOST)` and activates
+   it. Files that home-manager takes over, such as `~/.zshrc`, `~/.ssh/config` and
+   `~/.config/nvim`, are renamed to `*.pre-dev-env` first. `~/.zprofile` and `~/.gitconfig`
+   are left alone. To keep your own additions, source or include them from `hosts/mac.nix`,
+   e.g. `devEnv.user.home.programs.zsh.initContent = lib.mkOrder 1900 "[[ -r ~/.zshrc.local ]] && source ~/.zshrc.local";`
+   and `devEnv.user.home.programs.ssh.includes = [ "config.local" ];`.
+4. Open a new terminal. Nix's tools come first on `PATH`, ahead of Homebrew and `/usr/bin`.
+5. Continue with "Inside the machine" below. If an agent such as 1Password already holds your
+   GitHub key, skip `devenv-keys`: put the public key at `~/.ssh/id_ed25519_<account>.pub`
+   instead, and ssh asks the agent for the matching private key.
+
+`make switch` on the Mac rebuilds after a change. To undo a switch, run an older generation's
+`activate` (`~/.local/state/nix/profiles/home-manager-*-link`); to remove the setup, run
+`nix run home-manager -- uninstall` and rename the `*.pre-dev-env` files back.
+
 ## Inside the machine
 
 1. `devenv-keys` creates one SSH key per git account and prints where to register each one.

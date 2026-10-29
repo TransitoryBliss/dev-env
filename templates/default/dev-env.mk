@@ -15,9 +15,13 @@
 #             /dev/sda on Parallels, /dev/nvme0n1 on VMware Fusion
 #   DEV_ENV   optional: local checkout of the dev-env base to build against
 #             instead of the flake input (for developing the base itself)
+#   MAC_HOST  homeConfigurations entry for `make switch` on the Mac itself,
+#             without a VM (set in the Makefile)
 
 NIXUSER ?= me
 VM_HOST ?= vm
+MAC_HOST ?= mac
+UNAME_S ?= $(shell uname -s)
 
 # Inside a NixOS machine, HOST defaults to its hostname (each host sets
 # networking.hostName to its nixosConfigurations name); from the Mac, to VM_HOST.
@@ -267,9 +271,16 @@ mac/router-remove:
 	-launchctl bootout gui/$$(id -u)/$(ROUTER_LABEL)
 	rm -f "$(ROUTER_PLIST)" "$(ROUTER_DIR)/router/Caddyfile"
 
-# Run inside the machine (VM or WSL), from this repo.
+# Run inside the machine (VM or WSL), from this repo. On the Mac itself (no VM)
+# it builds homeConfigurations.$(MAC_HOST) and activates it; files that
+# home-manager takes over, such as an existing ~/.zshrc, become *.pre-dev-env.
 switch:
+ifeq ($(UNAME_S),Darwin)
+	gen=$$(nix build --no-link --print-out-paths .#homeConfigurations.$(MAC_HOST).activationPackage $(LOCAL_FLAGS)) && \
+		HOME_MANAGER_BACKUP_EXT=pre-dev-env "$$gen/activate"
+else
 	sudo nixos-rebuild switch --flake .#$(HOST) $(LOCAL_FLAGS)
+endif
 
 # Run inside the machine, after logging in to Claude Code (`claude`) once.
 # Agent add-ons that install through their own tooling; safe to re-run.

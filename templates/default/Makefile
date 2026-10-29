@@ -6,5 +6,7 @@
 NIXUSER ?= me
 # HOST when running from the Mac; inside a machine, HOST is its hostname.
 VM_HOST ?= vm
+# homeConfigurations entry for `make switch` on the Mac itself (no VM).
+MAC_HOST ?= mac
 
 include dev-env.mk
