@@ -338,12 +338,13 @@ agents/setup:
 	herdr config check
 	-herdr server reload-config
 
-# Run inside the machine. The dev-env base this config builds against: DEV_ENV
-# if set, otherwise the locked dev-env input (fetched if needed).
+# Run inside the machine (or on the Mac itself). The dev-env base this config
+# builds against: DEV_ENV if set, otherwise the locked dev-env input (fetched if
+# needed). Not `nix flake archive --dry-run`: Determinate Nix refuses that for a
+# local git checkout ("cannot compute store path for unlocked input").
 BASE_SRC = if test -n "$(DEV_ENV)"; then src="$(DEV_ENV)"; else \
-		json=$$(nix flake archive --json --dry-run --no-write-lock-file) || exit 1; \
-		src=$$(printf '%s' "$$json" | jq -r '.inputs["dev-env"].path // empty'); \
-		test -n "$$src" || { echo "no dev-env input in flake.lock"; exit 1; }; \
+		src=$$(nix eval --raw --impure --expr '(builtins.getFlake (toString ./.)).inputs.dev-env.outPath') || \
+			{ echo "no dev-env input in flake.lock"; exit 1; }; \
 	fi; \
 	src="$$src/templates/default/dev-env.mk"; \
 	test -f "$$src" || { echo "$$src not found (a dev-env from before dev-env.mk? run nix flake update dev-env)"; exit 1; }
