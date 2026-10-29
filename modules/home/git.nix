@@ -99,6 +99,7 @@ let
 
   wtEnv = ''
     typeset -g _WT_SRC=${lib.escapeShellArg "${home}/source"} _WT_ROOT=${lib.escapeShellArg cfg.worktreeRoot}
+    typeset -g _WT_SETSID=${lib.escapeShellArg (lib.getExe' pkgs.util-linux "setsid")}
   '';
 
   # `wt gc --auto` outside an interactive shell: the systemd timer and the herdr

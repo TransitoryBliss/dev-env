@@ -22,6 +22,9 @@ typeset -g _WT_SELF=${(%):-%N}
 # Set by modules/home/git.nix before sourcing this; the defaults are for `zsh -f`.
 typeset -g _WT_ROOT=${_WT_ROOT:-$HOME/.herdr/worktrees}
 typeset -g _WT_SRC=${_WT_SRC:-$HOME/source}
+# setsid detaches `wt done`'s cleanup from the closing workspace. git.nix sets it to
+# util-linux's by path: macOS has none on PATH.
+typeset -g _WT_SETSID=${_WT_SETSID:-setsid}
 typeset -g _WT_SEP=$'\x1f' # not a tab: `read` collapses runs of tabs, dropping empty fields
 
 wt() {
@@ -338,7 +341,7 @@ _wt_done() {
     log=${XDG_STATE_HOME:-$HOME/.local/state}/wt.log
     mkdir -p "${log:h}"
     print -r -- "wt: removing ${dir/#$HOME/~}; this workspace will close"
-    setsid -f zsh -fc "sleep ${(q)${WT_DONE_DELAY:-0}}; _WT_ROOT=${(q)_WT_ROOT} _WT_SRC=${(q)_WT_SRC}; source ${(q)_WT_SELF}; _wt_remove ${(q)dir} ${(q)main} ${(q)branch} ${(q)wsid} ${(q)force}" \
+    "$_WT_SETSID" -f zsh -fc "sleep ${(q)${WT_DONE_DELAY:-0}}; _WT_ROOT=${(q)_WT_ROOT} _WT_SRC=${(q)_WT_SRC}; source ${(q)_WT_SELF}; _wt_remove ${(q)dir} ${(q)main} ${(q)branch} ${(q)wsid} ${(q)force}" \
       </dev/null >>$log 2>&1
   else
     _wt_remove "$dir" "$main" "$branch" "$wsid" "$force" && print -r -- "wt: removed ${dir/#$HOME/~}"
@@ -953,7 +956,7 @@ _wt_task_done() {
     log=${XDG_STATE_HOME:-$HOME/.local/state}/wt.log
     mkdir -p "${log:h}"
     print -r -- "wt: removing task $name; its workspace will close"
-    setsid -f zsh -fc "sleep ${(q)${WT_DONE_DELAY:-0}}; _WT_ROOT=${(q)_WT_ROOT} _WT_SRC=${(q)_WT_SRC}; source ${(q)_WT_SELF}; _wt_task_remove ${(q)td} ${(q)force} && for w in ${(j: :)${(q)ws}}; do herdr workspace close \$w; done" \
+    "$_WT_SETSID" -f zsh -fc "sleep ${(q)${WT_DONE_DELAY:-0}}; _WT_ROOT=${(q)_WT_ROOT} _WT_SRC=${(q)_WT_SRC}; source ${(q)_WT_SELF}; _wt_task_remove ${(q)td} ${(q)force} && for w in ${(j: :)${(q)ws}}; do herdr workspace close \$w; done" \
       </dev/null >>$log 2>&1
   else
     _wt_task_remove $td "$force" || return 1

@@ -104,6 +104,17 @@ lib.runTests {
     expr = lib.last (ex.launchd.agents.wt-gc.config.ProgramArguments or [ null ]);
     expected = "--auto";
   };
+  # `wt done` detaches its cleanup with setsid. The wt function runs with the
+  # user's PATH, which has no setsid on macOS, so wt.zsh gets util-linux's by path.
+  testWtSetsidByPath = {
+    expr = builtins.match ".*_WT_SETSID='?/nix/store/[^ ']*/bin/setsid.*"
+      (lib.replaceStrings [ "\n" ] [ " " ] ex.programs.zsh.initContent) != null;
+    expected = true;
+  };
+  testWtNoBareSetsid = {
+    expr = lib.hasInfix " setsid -f" (builtins.readFile ../modules/home/wt.zsh);
+    expected = false;
+  };
   testMdNoXdgOpen = {
     expr = lib.hasInfix "xdg-open" ex.programs.zsh.initContent;
     expected = false;
