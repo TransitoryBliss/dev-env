@@ -1,11 +1,20 @@
 # Prebuilt release binary. It's a Bun single-file executable, which patchelf
-# can corrupt, so it's installed unpatched and runs via nix-ld.
+# can corrupt, so it's installed unpatched and runs via nix-ld. On macOS it
+# must stay byte-for-byte as released too, or its code signature breaks.
 { lib, stdenvNoCC, fetchurl }:
 
 let
   version = "0.27.25";
   # Per-platform release asset and hash (from the release's .sha256 files).
   assets = {
+    aarch64-darwin = {
+      name = "plannotator-darwin-arm64";
+      hash = "sha256-JN5g+/jjvatRl88635zjgeioGPLVSyoFX2EpHHsiYOo=";
+    };
+    x86_64-darwin = {
+      name = "plannotator-darwin-x64";
+      hash = "sha256-+kB7qjduNHj5/tjr4Tn4GZQtJiA/hUQubniAxxWJ+Hc=";
+    };
     aarch64-linux = {
       name = "plannotator-linux-arm64";
       hash = "sha256-79ppKHm2gL+kzgSQcRme7F2t349pIcJiX6iKxWDLSJk=";
