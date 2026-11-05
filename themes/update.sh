@@ -41,11 +41,25 @@ onedark              | Atom One Dark         | onedark     | onedark            
 nightfox             | Nightfox              | nightfox    | nightfox             | dark
 carbonfox            | Carbonfox             | nightfox    | carbonfox            | dark
 dayfox               | Dayfox                | nightfox    | dayfox               | light
+duskfox              | Duskfox               | nightfox    | duskfox              | dark
+nordfox              | Nordfox               | nightfox    | nordfox              | dark
+terafox              | Terafox               | nightfox    | terafox              | dark
+dawnfox              | Dawnfox               | nightfox    | dawnfox              | light
 solarized-dark       | iTerm2 Solarized Dark | solarized   | solarized            | dark
 solarized-light      | iTerm2 Solarized Light| solarized   | solarized            | light
 github-dark          | GitHub Dark Default   | github      | github_dark_default  | dark
 github-light         | GitHub Light Default  | github      | github_light_default | light
+github-dark-dimmed   | GitHub Dark Dimmed    | github      | github_dark_dimmed   | dark
+github-dark-high-contrast  | GitHub Dark High Contrast  | github | github_dark_high_contrast  | dark
+github-dark-colorblind     | GitHub Dark Colorblind     | github | github_dark_colorblind     | dark
+github-light-high-contrast | GitHub Light High Contrast | github | github_light_high_contrast | light
+github-light-colorblind    | GitHub Light Colorblind    | github | github_light_colorblind    | light
 monokai-pro          | Monokai Pro           | monokai-pro | monokai-pro          | dark
+monokai-pro-machine  | Monokai Pro Machine   | monokai-pro | monokai-pro-machine  | dark
+monokai-pro-octagon  | Monokai Pro Octagon   | monokai-pro | monokai-pro-octagon  | dark
+monokai-pro-ristretto | Monokai Pro Ristretto | monokai-pro | monokai-pro-ristretto | dark
+monokai-pro-spectrum | Monokai Pro Spectrum  | monokai-pro | monokai-pro-spectrum | dark
+monokai-pro-light    | Monokai Pro Light     | monokai-pro | monokai-pro-light    | light
 ayu-dark             | Ayu                   | ayu         | ayu-dark             | dark
 ayu-mirage           | Ayu Mirage            | ayu         | ayu-mirage           | dark
 ayu-light            | Ayu Light             | ayu         | ayu-light            | light
